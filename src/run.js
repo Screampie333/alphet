@@ -6,7 +6,8 @@
 //   npm start        -> keeps running forever, every INTERVAL_MINUTES
 
 import { config } from "./config.js";
-import { collect } from "./collector.js";
+import { collect, apiCalls } from "./collector.js";
+import { windowCalls } from "./windows.js";
 import { score } from "./scoring.js";
 import { append, recent } from "./storage.js";
 import { consoleReport, xPostReport } from "./report.js";
@@ -14,6 +15,9 @@ import { consoleReport, xPostReport } from "./report.js";
 const args = process.argv.slice(2);
 const runOnce = args.includes("--once");
 const useMock = args.includes("--mock");
+
+// Helius free tier is 1M credits/month, which is about this many per day.
+const FREE_TIER_DAILY = 33000;
 
 async function tick() {
   try {
@@ -35,7 +39,29 @@ async function tick() {
     console.log(consoleReport(snapshot));
     console.log("  --- X post version ---\n");
     console.log(xPostReport(snapshot));
-    console.log(`\n  saved. ${total} snapshot(s) on file.\n`);
+    console.log(`\n  saved. ${total} snapshot(s) on file.`);
+
+    // Quota is the real constraint on this project, so every run reports what
+    // it cost and what that works out to per day. Reported rather than
+    // estimated: pump.fun's traffic doubled inside one afternoon, and every
+    // figure worked out on paper went stale with it.
+    if (!useMock) {
+      const used = apiCalls.total + windowCalls.count;
+      const perDay = Math.round(used * (1440 / config.intervalMinutes));
+      const share = Math.round((perDay / FREE_TIER_DAILY) * 100);
+      const warn = share > 85 ? " - too close, raise INTERVAL_MINUTES or lower SAMPLE_SECONDS" : "";
+
+      console.log(
+        `  cost: ${used} call(s) this run -> ~${perDay.toLocaleString()}/day, ` +
+          `${share}% of the free tier${warn}\n`
+      );
+
+      apiCalls.rpc = 0;
+      apiCalls.parse = 0;
+      windowCalls.count = 0;
+    } else {
+      console.log("");
+    }
 
     return snapshot;
   } catch (err) {

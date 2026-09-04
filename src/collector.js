@@ -21,12 +21,21 @@ import { countWindows } from "./windows.js";
 
 const HELIUS_URL = `https://mainnet.helius-rpc.com/?api-key=${config.heliusApiKey}`;
 
+
+// Every Helius call this run has made. Free-tier quota is the real constraint
+// on how often the collector can run and how wide a slice it can read, so the
+// number is reported rather than estimated - pump.fun's traffic doubled in a
+// single afternoon during development, and any figure worked out on paper
+// went stale with it.
+export const apiCalls = { rpc: 0, parse: 0, get total() { return this.rpc + this.parse; } };
+
 // --- helper: one JSON-RPC call to Helius ---
 async function rpc(method, params = []) {
   if (!config.heliusApiKey) {
     throw new Error("No HELIUS_API_KEY set. Run with --mock, or add a key to .env");
   }
 
+  apiCalls.rpc++;
   const res = await fetch(HELIUS_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -97,13 +106,26 @@ function mockRaw() {
 // thing - see the note on config.sampleSeconds for why. SAMPLE_SCALE converts
 // the sample's rate-like numbers back up to full-window figures.
 const SAMPLE_MS = config.sampleSeconds * 1000;
+// Nominal scale, used only where a per-run figure is not to hand. The real
+// one is computed per run from the span actually read (see fetchWindow).
 const SAMPLE_SCALE = (config.intervalMinutes * 60) / config.sampleSeconds;
 const LAMPORTS_PER_SOL = 1_000_000_000;
 const HELIUS_PARSE_URL = `https://api.helius.xyz/v0/transactions/?api-key=${config.heliusApiKey}`;
 
-// Roughly 10x the signatures a default 120s sample needs. Purely a runaway
-// guard - see collectSignaturesSince.
-const MAX_SIGNATURES_PER_RUN = 60000;
+// The hard ceiling on how much one run may read, and the reason the monthly
+// quota is safe.
+//
+// Cost used to scale with pump.fun's traffic, which is not something we
+// control: it went from 250 to 520 signatures/second inside one afternoon,
+// and the same settings that cost 58% of the free tier at the low end cost
+// 152% at the high end. Capping the signatures read makes a run cost about
+// the same whatever the chain is doing - roughly 6,000 signatures is 60
+// parse calls plus a handful of paging calls.
+//
+// When the cap bites, the run covers less time than sampleSeconds asked for.
+// That is fine: collectSignaturesSince reports the span it actually read and
+// the rate-like numbers scale from that, so runs stay comparable.
+const MAX_SIGNATURES_PER_RUN = 6000;
 
 let windowPromise = null;
 
@@ -116,12 +138,18 @@ function getWindowTransactions() {
 
 async function fetchWindow() {
   const cutoffSeconds = Math.floor((Date.now() - SAMPLE_MS) / 1000);
-  const signatures = await collectSignaturesSince(cutoffSeconds);
+  const { signatures, spanSeconds } = await collectSignaturesSince(cutoffSeconds);
   const events = await parseSignatures(signatures);
   const buckets = classify(events);
 
+  // Scale from the span actually read, not the one configured. Under the cap
+  // they are the same; over it, this is what keeps a heavy-traffic run
+  // comparable with a quiet one.
+  buckets.scale = (config.intervalMinutes * 60) / spanSeconds;
+  buckets.spanSeconds = spanSeconds;
+
   if (process.env.DEBUG_COLLECTOR === "1") {
-    console.log(`\n[debug] sampled ${config.sampleSeconds}s (scale x${SAMPLE_SCALE.toFixed(1)})`);
+    console.log(`\n[debug] asked ${config.sampleSeconds}s, read ${spanSeconds}s (scale x${buckets.scale.toFixed(1)})`);
     console.log(`[debug] ${signatures.length} signature(s) -> ${events.length} parsed event(s)`);
     console.log(
       `[debug] kept: ${buckets.creates.length} create / ` +
@@ -139,7 +167,10 @@ async function fetchWindow() {
 // pass the start of our time window. Plain RPC, no Helius parsing yet.
 async function collectSignaturesSince(cutoffSeconds) {
   const signatures = [];
+  let newest = null;
+  let oldest = null;
   let before;
+  let hitCap = false;
 
   while (true) {
     const batch = await rpc("getSignaturesForAddress", [
@@ -154,25 +185,36 @@ async function collectSignaturesSince(cutoffSeconds) {
         reachedCutoff = true;
         break;
       }
+      if (item.blockTime) {
+        if (newest === null) newest = item.blockTime;
+        oldest = item.blockTime;
+      }
       signatures.push(item.signature);
+
+      if (signatures.length >= MAX_SIGNATURES_PER_RUN) {
+        hitCap = true;
+        break;
+      }
     }
 
-    // The time cutoff above is what normally stops this loop. This cap only
-    // catches a runaway (a bad clock, a sudden traffic spike) so one run can
-    // never eat the whole month's quota.
-    if (reachedCutoff || signatures.length > MAX_SIGNATURES_PER_RUN) break;
+    if (reachedCutoff || hitCap) break;
     before = batch[batch.length - 1].signature;
   }
 
-  if (signatures.length > MAX_SIGNATURES_PER_RUN) {
+  // How much time this actually covers. Normally it's sampleSeconds, but when
+  // the cap bites it's less, and the caller scales by what was really read
+  // rather than by what was asked for.
+  const spanSeconds = newest !== null && oldest !== null ? Math.max(1, newest - oldest) : config.sampleSeconds;
+
+  if (hitCap) {
     console.warn(
-      `  warning: hit the ${MAX_SIGNATURES_PER_RUN}-signature cap before covering ` +
-        `${config.sampleSeconds}s. This run's numbers cover less time than usual - ` +
-        `lower SAMPLE_SECONDS so runs stay comparable.`
+      `  note: traffic is heavy - read ${signatures.length} signatures covering ` +
+        `${spanSeconds}s of the ${config.sampleSeconds}s sample. Scaling from the ` +
+        `${spanSeconds}s actually read.`
     );
   }
 
-  return signatures;
+  return { signatures, spanSeconds };
 }
 
 // Helius accepts up to 100 signatures per call and returns them decoded:
@@ -182,6 +224,7 @@ async function parseSignatures(signatures) {
 
   for (let i = 0; i < signatures.length; i += 100) {
     const chunk = signatures.slice(i, i + 100);
+    apiCalls.parse++;
     const res = await fetch(HELIUS_PARSE_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -355,9 +398,10 @@ async function collectTokenCounts() {
 
 // 2. How much total volume traded?
 async function collectVolume() {
-  const { trades } = await getWindowTransactions();
+  const { trades, scale } = await getWindowTransactions();
   const totalSol = trades.reduce((sum, event) => sum + solAmount(event), 0);
-  return { totalSol };
+  // Scaled here, using the span actually read - see fetchWindow.
+  return { totalSol: totalSol * scale };
 }
 
 // A rug can happen well after a token's creation, so we can't judge it from
@@ -556,7 +600,7 @@ export async function collect({ mock = false } = {}) {
   return {
     tokensCreated: counts.created,
     tokensGraduated: counts.graduated,
-    totalVolumeSol: Number((volume.totalSol * SAMPLE_SCALE).toFixed(2)),
+    totalVolumeSol: Number(volume.totalSol.toFixed(2)),
     tokensRugged: rugs.count,
     activeTokens: rugs.activeTokens,
     avgPriceSwingPercent: volatility.avgSwingPercent,

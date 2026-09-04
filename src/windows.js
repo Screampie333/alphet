@@ -46,7 +46,10 @@ const PARSE_URL = `https://api.helius.xyz/v0/transactions/?api-key=${config.heli
 const MAX_PAGES = 200;
 const PURITY_SAMPLE = 100;
 
+export const windowCalls = { count: 0 };
+
 async function rpc(method, params) {
+  windowCalls.count++;
   const res = await fetch(RPC_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -129,6 +132,7 @@ async function measurePurity(signatures, wantedType) {
     sample.push(signatures[i].signature);
   }
 
+  windowCalls.count++;
   const res = await fetch(PARSE_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
