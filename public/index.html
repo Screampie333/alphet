@@ -118,7 +118,7 @@
 
   <!-- ============================================================
        THE REPORT  — laid out like a phone forecast: right-now
-       reading, half-hourly strip, then daily range rows.
+       reading, hourly strip, then daily range rows.
        ============================================================ -->
   <section class="hero" id="report">
     <div class="page">
@@ -164,15 +164,14 @@
         <div class="wx-cond" id="wxCond">Cloudy ⛅</div>
         <p class="wx-summary" id="wxSummary">Normal volume, no clear trend either way.</p>
         <div class="wx-hl" id="wxHL"></div>
-        <div class="wx-chips chips" id="wxChips"></div>
       </div>
 
       <div class="wx-grid">
-        <!-- half-hourly strip -->
+        <!-- hourly strip -->
         <div class="wx-card">
           <div class="wx-card-head">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-            <span>Half-hourly readings</span>
+            <span>Hourly readings</span>
             <span class="right" id="wxHoursMeta"></span>
           </div>
           <div class="wx-hours" id="wxHours"></div>

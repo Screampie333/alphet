@@ -1,6 +1,6 @@
 /* weather.css
    The report, laid out the way a phone weather app lays out a forecast:
-   a big "right now" reading, a scrollable strip of half-hourly readings, a
+   a big "right now" reading, a scrollable strip of hourly readings, a
    run of daily rows with range bars, then a grid of detail tiles.
 
    The structure is borrowed; the surfaces, type and colour are Haboob's.
@@ -109,24 +109,8 @@
 .mascot svg{position:relative;height:auto;}
 .wx-mascot{margin-bottom:6px;}
 
-/* condition switcher */
-.chip{
-  font-family:var(--font-body);
-  font-size:12.5px;
-  font-weight:500;
-  padding:7px 14px;
-  border-radius:20px;
-  border:1px solid var(--border);
-  background:transparent;
-  color:var(--text-muted);
-  cursor:pointer;
-  transition:all .15s ease;
-}
-.chip:hover{border-color:var(--sand);color:var(--text);}
-.chip.active{background:var(--sand);border-color:var(--sand);color:var(--ink);font-weight:700;}
-
 /* ============================================================
-   HALF-HOURLY STRIP
+   HOURLY STRIP
    ============================================================ */
 .wx-hours{
   min-width:0;
@@ -325,8 +309,6 @@
   margin-top:14px;
 }
 
-/* condition switcher, kept from the old panel so the five looks stay previewable */
-.wx-chips{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:20px;}
 
 @media (max-width:520px){
   .wx-day{grid-template-columns:52px 22px 26px 1fr 26px;gap:8px;}

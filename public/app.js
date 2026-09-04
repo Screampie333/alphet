@@ -1,10 +1,10 @@
 // app.js
-// Draws the weather report: the "right now" reading, the half-hourly strip,
-// the daily rows and the detail tiles.
+// Draws the weather report: the "right now" reading, the hourly strip, the
+// daily rows and the detail tiles.
 //
 // Two data paths, same renderer:
-//   demo  - a generated series, so the page is never empty and all five
-//           conditions stay previewable
+//   demo  - a generated series, so the page is never empty before the
+//           collector has produced anything
 //   live  - GET /api/latest for the current reading, GET /api/history for
 //           the series behind the strip and the daily rows
 
@@ -125,7 +125,6 @@ const el = {
   daysMeta: document.getElementById('wxDaysMeta'),
   tiles: document.getElementById('wxTiles'),
   raw: document.getElementById('wxRaw'),
-  chips: document.getElementById('wxChips'),
   note: document.getElementById('wxNote'),
   glow: document.getElementById('mascotGlow'),
   mouth: document.getElementById('mouthShape'),
@@ -142,34 +141,75 @@ const fullFmt = new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyl
    RENDERING
    ------------------------------------------------------------------ */
 
-// Half-hourly strip. Every value is directly labelled, so the tooltip only
-// carries the things the column has no room for.
-function renderHours(series) {
+// Fold a series into one column per clock hour.
+//
+// The collector runs every few minutes, which is the right cadence for the
+// index but far too fine to read as a strip - a dozen columns covering one
+// hour tells you nothing you can act on. Each hour becomes its own column
+// carrying the average of the readings inside it, so the strip covers a
+// stretch of the day instead of the last few minutes.
+//
+// Bucketed on the local clock, not UTC, so the labels line up with the
+// reader's own hours.
+function groupByHour(series) {
+  const hours = new Map();
+
+  for (const point of series) {
+    const when = new Date(point.timestamp);
+    const start = new Date(
+      when.getFullYear(),
+      when.getMonth(),
+      when.getDate(),
+      when.getHours()
+    );
+    const key = start.getTime();
+
+    if (!hours.has(key)) hours.set(key, { start, values: [] });
+    hours.get(key).values.push(point.index);
+  }
+
+  return [...hours.values()]
+    .sort((a, b) => a.start - b.start)
+    .map((hour) => {
+      const total = hour.values.reduce((sum, v) => sum + v, 0);
+      const index = Math.round(total / hour.values.length);
+      return { start: hour.start, index, readings: hour.values.length };
+    });
+}
+
+// Hourly strip. Every value is directly labelled, so the tooltip only carries
+// what the column has no room for.
+function renderHours(hours, currentIndex = null) {
   el.hours.innerHTML = '';
 
-  series.forEach((point, i) => {
-    const cond = byKey[point.condition.key] || byKey.cloudy;
-    const isNow = i === series.length - 1;
-    const when = new Date(point.timestamp);
+  hours.forEach((hour, i) => {
+    const isNow = i === hours.length - 1;
+    // The current hour is still in progress, so its column shows the live
+    // reading rather than a part-hour average - that way it agrees with the
+    // big number above it. Past hours show what they averaged.
+    const shown = isNow && currentIndex !== null ? currentIndex : hour.index;
+    const cond = conditionForIndex(shown);
 
     const col = document.createElement('div');
     col.className = 'wx-hour' + (isNow ? ' now' : '');
-    col.title = `${fullFmt.format(when)} · ${cond.label} · index ${point.index}`;
+    col.title =
+      `${fullFmt.format(hour.start)} · ${cond.label} · index ${shown}` +
+      (isNow ? '' : ` · average of ${hour.readings} reading${hour.readings === 1 ? '' : 's'}`);
     col.innerHTML =
       '<span class="t"></span>' +
       '<span class="ico"></span>' +
       '<span class="v"></span>' +
       '<span class="pip"></span>';
 
-    col.querySelector('.t').textContent = isNow ? 'Now' : timeFmt.format(when);
+    col.querySelector('.t').textContent = isNow ? 'Now' : timeFmt.format(hour.start);
     col.querySelector('.ico').textContent = cond.emoji;
-    col.querySelector('.v').textContent = point.index;
+    col.querySelector('.v').textContent = shown;
     col.querySelector('.pip').style.background = cond.color;
 
     el.hours.appendChild(col);
   });
 
-  // Newest reading sits at the right, which is where the eye should land.
+  // Newest hour sits at the right, which is where the eye should land.
   el.hours.scrollLeft = el.hours.scrollWidth;
 }
 
@@ -271,7 +311,7 @@ function renderTiles(scores, raw) {
 }
 
 // Paint the hero reading and drive the accent colour + mascot mood.
-function renderNow(cond, index, summary, series) {
+function renderNow(cond, index, summary, readings) {
   document.documentElement.style.setProperty('--accent', cond.color);
 
   el.index.innerHTML = '';
@@ -287,37 +327,36 @@ function renderNow(cond, index, summary, series) {
   el.mouth.setAttribute('ry', cond.mouth.ry);
   el.mouth.setAttribute('cy', cond.mouth.cy);
 
-  // High and low across whatever series we have, the way a forecast shows
-  // the day's range under the current temperature.
-  const values = series.map((p) => p.index);
-  el.hl.innerHTML = 'H:<span>' + Math.max(...values) + '</span>  L:<span>' + Math.min(...values) + '</span>';
-
-  document.querySelectorAll('.chip').forEach((chip) => {
-    chip.classList.toggle('active', chip.dataset.key === cond.key);
-  });
+  // High and low across the individual readings, not the hourly averages.
+  // Averaging first would hide the range it is there to show: an hour that
+  // ran 41 to 70 averages to 56, and "H:56 L:56" says nothing happened.
+  const values = readings.map((p) => p.index);
+  el.hl.innerHTML =
+    'H:<span>' + Math.max(...values) + '</span>  L:<span>' + Math.min(...values) + '</span>';
 }
 
 /* ------------------------------------------------------------------
    VIEWS
    ------------------------------------------------------------------ */
 
-const HALF_HOUR = 30 * 60 * 1000;
-const DAY = 24 * 60 * 60 * 1000;
+const HOUR = 60 * 60 * 1000;
+const HOURS_SHOWN = 14;
 
 function showDemo(cond) {
-  const hourly = demoSeries(cond.score, 14, HALF_HOUR);
-  const daily = demoSeries(cond.score, 7 * 6, 4 * 60 * 60 * 1000); // 6 readings/day, 7 days
+  const readings = demoSeries(cond.score, HOURS_SHOWN, HOUR);
+  const hourly = groupByHour(readings);
+  const daily = demoSeries(cond.score, 7 * 6, 4 * HOUR); // 6 readings/day, 7 days
 
   el.loc.textContent = 'pump.fun';
-  renderNow(cond, cond.score, cond.desc, hourly);
-  renderHours(hourly);
+  renderNow(cond, cond.score, cond.desc, readings);
+  renderHours(hourly, cond.score);
   renderDays(daily);
   renderTiles(demoScores[cond.key], demoRaw[cond.key]);
 
   el.hoursMeta.textContent = 'demo';
   el.daysMeta.textContent = 'demo';
   el.note.textContent =
-    'Demo reading. Pick a condition above to preview how each one looks — real numbers replace these as soon as a snapshot is available.';
+    'Demo reading — real numbers replace these as soon as a snapshot is available.';
 }
 
 function showLive(snapshot, history) {
@@ -326,16 +365,22 @@ function showLive(snapshot, history) {
   // The snapshot may be newer than the history file's tail, so make sure the
   // current reading is the last point of the series either way.
   const series = history.length ? history : [snapshot];
-  const hourly = series.slice(-14);
+  const hourly = groupByHour(series).slice(-HOURS_SHOWN);
+
+  // Only the readings the strip actually covers feed the high/low, so the
+  // range under the index describes the same stretch the columns show.
+  const shownFrom = hourly.length ? hourly[0].start.getTime() : 0;
+  const shownReadings = series.filter((s) => new Date(s.timestamp).getTime() >= shownFrom);
 
   el.loc.textContent = 'pump.fun';
-  renderNow(cond, snapshot.index, snapshot.condition.summary, hourly);
-  renderHours(hourly);
+  renderNow(cond, snapshot.index, snapshot.condition.summary, shownReadings);
+  renderHours(hourly, snapshot.index);
   renderDays(series);
   renderTiles(snapshot.subScores, snapshot.raw);
 
   const readings = series.length;
-  el.hoursMeta.textContent = readings > 1 ? `last ${Math.min(readings, 14)} readings` : 'first reading';
+  el.hoursMeta.textContent =
+    hourly.length > 1 ? `last ${hourly.length} hours` : 'first hour';
   el.daysMeta.textContent = `${groupByDay(series).length} day(s) on file`;
 
   el.statusDot.classList.add('live');
@@ -356,20 +401,6 @@ function timeAgo(iso) {
   const hours = Math.round(minutes / 60);
   if (hours < 24) return hours + 'h ago';
   return Math.round(hours / 24) + 'd ago';
-}
-
-/* ------------------------------------------------------------------
-   CONDITION CHIPS
-   ------------------------------------------------------------------ */
-
-for (const cond of conditions) {
-  const chip = document.createElement('button');
-  chip.className = 'chip';
-  chip.type = 'button';
-  chip.textContent = cond.label;
-  chip.dataset.key = cond.key;
-  chip.addEventListener('click', () => showDemo(cond));
-  el.chips.appendChild(chip);
 }
 
 /* ------------------------------------------------------------------

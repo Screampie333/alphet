@@ -39,7 +39,7 @@ function serveLatestSnapshot(res) {
 }
 
 // The weather view needs a series, not just the newest reading - the
-// half-hourly strip and the daily rows are both drawn from this.
+// hourly strip and the daily rows are both drawn from this.
 function serveHistory(res, requestUrl) {
   const params = new URL(requestUrl, "http://localhost").searchParams;
   const days = Math.min(Math.max(Number(params.get("days")) || 7, 1), 30);
