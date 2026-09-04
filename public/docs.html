@@ -119,6 +119,7 @@
           <a class="toc-item active" href="#overview" data-target="overview">Overview</a>
           <a class="toc-item" href="#signals" data-target="signals">The four signals</a>
           <a class="toc-item" href="#scoring" data-target="scoring">How scoring works</a>
+          <a class="toc-item" href="#timeframes" data-target="timeframes">Timeframes</a>
           <a class="toc-item" href="#conditions" data-target="conditions">Reading the index</a>
           <a class="toc-item" href="#running" data-target="running">Running it yourself</a>
           <a class="toc-item" href="#limits" data-target="limits">Known limits</a>
@@ -229,6 +230,22 @@
           <p>The four sub-scores are multiplied by their weights and summed. The weights live in <code>src/config.js</code> and must add up to 1.0 — they're a starting guess, not a truth, and are meant to be tuned once you have real data.</p>
         </section>
 
+        <!-- TIMEFRAMES -->
+        <section class="doc-section" id="timeframes">
+          <div class="doc-h2"><h2>Timeframes</h2><div class="rule"></div></div>
+          <p>The four signals can be read over <code>5m</code>, <code>1h</code>, <code>6h</code> or <code>24h</code>, each shown against the equivalent window before it — so a number always arrives with a direction.</p>
+
+          <h3>A window can never be finer than the collector</h3>
+          <p>Windows are rolled up from stored snapshots, not fetched per request. Reaching back 24 hours on-chain would mean paging through millions of signatures, which the free tier cannot do. So the collection interval sets the floor: at <code>INTERVAL_MINUTES=5</code> every window is available, at <code>30</code> the 5m button is disabled rather than showing a misleading zero.</p>
+
+          <div class="note">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+            <p><strong>Windows fill in as the collector runs.</strong> A 24h window needs 24 hours of collection behind it. Until then the panel reports its own coverage — &ldquo;72 of ~288 readings, about 25% covered&rdquo; — rather than presenting a partial day as a whole one.</p>
+          </div>
+
+          <h3>Rates are ratios of sums</h3>
+          <p>Graduation rate and rug rate are computed as the total across the window divided by the total, never as the average of each snapshot&rsquo;s own rate. Averaging rates would let a quiet snapshot with 3 tokens count as heavily as a busy one with 3,000 — in testing that inflated a 1.10% graduation rate to 50.5%.</p>
+        </section>
         <!-- CONDITIONS -->
         <section class="doc-section" id="conditions">
           <div class="doc-h2"><h2>Reading the index</h2><div class="rule"></div></div>

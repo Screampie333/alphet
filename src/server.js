@@ -14,6 +14,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { config, ROOT } from "./config.js";
 import { latest, recent } from "./storage.js";
+import { rollupAll } from "./rollup.js";
 
 const PUBLIC_DIR = path.join(ROOT, "public");
 
@@ -48,6 +49,18 @@ function serveHistory(res, requestUrl) {
 
   res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
   res.end(JSON.stringify({ snapshots }));
+}
+
+// Every timeframe in one response, so switching between 1h / 6h / 24h on the
+// page is instant instead of a fresh request each time.
+//
+// The widest window compares 24h against the 24h before it, so this needs
+// three days of snapshots on hand to cover that plus any clock drift.
+function serveRollups(res) {
+  const snapshots = recent(3);
+
+  res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+  res.end(JSON.stringify(rollupAll(snapshots)));
 }
 
 function serveStatic(req, res) {
@@ -85,6 +98,11 @@ const server = http.createServer((req, res) => {
 
   if (req.method === "GET" && route === "/api/history") {
     serveHistory(res, req.url);
+    return;
+  }
+
+  if (req.method === "GET" && route === "/api/rollups") {
+    serveRollups(res);
     return;
   }
   serveStatic(req, res);

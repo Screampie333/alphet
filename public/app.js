@@ -395,3 +395,183 @@ Promise.all([
   if (!latest || !latest.snapshot) return;
   showLive(latest.snapshot, (history && history.snapshots) || []);
 });
+
+/* ------------------------------------------------------------------
+   TIMEFRAME ROLLUPS
+   The four signals over a selectable window, with the change against
+   the window before it. All four windows arrive in one response, so
+   switching between them is instant.
+   ------------------------------------------------------------------ */
+
+const tfRow = document.getElementById('tfRow');
+const tfBody = document.getElementById('tfBody');
+
+let rollups = null;
+let activeWindow = '24h';
+
+function formatValue(value, unit, decimals) {
+  if (value === null || value === undefined) return '—';
+
+  // Big counts read better compacted, the way a market panel shows them.
+  if (unit === ' SOL' && Math.abs(value) >= 1000) {
+    const compact = value >= 1e6
+      ? (value / 1e6).toFixed(2) + 'M'
+      : (value / 1e3).toFixed(1) + 'K';
+    return compact;
+  }
+  return nf.format(Number(value.toFixed(decimals ?? 0)));
+}
+
+// Direction is carried by the arrow as well as the colour, so the change is
+// still readable without colour vision. Whether a rise is good news depends
+// on the metric - more volume is good, more rugs is not.
+function deltaMarkup(changePercent, upIsGood) {
+  if (changePercent === null || changePercent === undefined) {
+    return { text: '—', cls: 'flat', title: 'No previous window to compare against yet' };
+  }
+
+  const rounded = Math.abs(changePercent) < 0.05 ? 0 : changePercent;
+  if (rounded === 0) return { text: '0%', cls: 'flat', title: 'Unchanged' };
+
+  const rising = rounded > 0;
+  const good = rising === upIsGood;
+  const arrow = rising ? '\u25B2' : '\u25BC';
+  const magnitude = Math.abs(rounded) >= 100
+    ? Math.round(Math.abs(rounded))
+    : Math.abs(rounded).toFixed(2);
+
+  return {
+    text: `${arrow} ${magnitude}%`,
+    cls: good ? 'up' : 'down',
+    title: `${rising ? 'Up' : 'Down'} ${magnitude}% vs the previous window — ${good ? 'better' : 'worse'} conditions`
+  };
+}
+
+function renderTimeframe() {
+  if (!rollups) return;
+
+  const win = rollups.windows.find((w) => w.key === activeWindow);
+  if (!win) return;
+
+  // Keep the pill row in step with the selection.
+  [...tfRow.children].forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.key === activeWindow);
+  });
+
+  if (!win.available) {
+    tfBody.innerHTML = '<div class="tf-empty"></div>';
+    tfBody.firstChild.textContent = win.reason;
+    return;
+  }
+
+  if (!win.readings) {
+    tfBody.innerHTML = '<div class="tf-empty"></div>';
+    tfBody.firstChild.textContent =
+      `No snapshots inside the last ${win.label} yet. Keep the collector running and this fills in.`;
+    return;
+  }
+
+  tfBody.innerHTML = '<div class="tf-cards"></div><div class="tf-counts"></div><p class="tf-cov"></p>';
+  const cards = tfBody.querySelector('.tf-cards');
+  const countRow = tfBody.querySelector('.tf-counts');
+  const cov = tfBody.querySelector('.tf-cov');
+
+  for (const key of ['graduationRate', 'volume', 'rugRate', 'volatility']) {
+    const metric = win.metrics[key];
+    if (!metric) continue;
+
+    const delta = deltaMarkup(metric.changePercent, metric.upIsGood);
+
+    const card = document.createElement('div');
+    card.className = 'tf-card';
+    card.innerHTML =
+      '<div class="tf-label"></div>' +
+      '<div class="tf-value-row"><span class="tf-value"></span><span class="tf-delta"></span></div>' +
+      '<div class="tf-score"><span class="s"></span><span class="bar"><i></i></span></div>';
+
+    card.querySelector('.tf-label').textContent = metric.label;
+
+    const value = card.querySelector('.tf-value');
+    value.textContent = formatValue(metric.value, metric.unit, metric.decimals);
+    if (metric.unit) {
+      const unit = document.createElement('span');
+      unit.className = 'u';
+      unit.textContent = metric.unit.trim();
+      value.appendChild(unit);
+    }
+
+    const deltaEl = card.querySelector('.tf-delta');
+    deltaEl.textContent = delta.text;
+    deltaEl.className = 'tf-delta ' + delta.cls;
+    deltaEl.title = delta.title;
+
+    const score = metric.score === null ? 0 : metric.score;
+    card.querySelector('.tf-score .s').textContent = 'score ' + (metric.score === null ? '—' : metric.score);
+    card.querySelector('.tf-score .bar i').style.width = score + '%';
+
+    cards.appendChild(card);
+  }
+
+  for (const key of ['tokensCreated', 'tokensGraduated', 'tokensRugged']) {
+    const count = win.counts[key];
+    if (!count) continue;
+
+    const delta = deltaMarkup(count.changePercent, count.upIsGood);
+
+    const cell = document.createElement('div');
+    cell.className = 'tf-count';
+    cell.innerHTML = '<div class="k"></div><div class="v"><span class="n"></span><span class="tf-delta"></span></div>';
+    cell.querySelector('.k').textContent = count.label;
+    cell.querySelector('.n').textContent = count.value === null ? '—' : nf.format(count.value);
+
+    const deltaEl = cell.querySelector('.tf-delta');
+    deltaEl.textContent = delta.text;
+    deltaEl.className = 'tf-delta ' + delta.cls;
+    deltaEl.title = delta.title;
+
+    countRow.appendChild(cell);
+  }
+
+  // Say plainly how much of the window actually has data behind it, so a
+  // partly-filled 24h isn't read as a complete day.
+  const partial = win.coveragePercent < 90;
+  cov.innerHTML = '';
+  cov.append(
+    partial
+      ? `${win.readings} of ~${win.expectedReadings} readings — this ${win.label} window is about ${win.coveragePercent}% covered so far.`
+      : `${win.readings} readings across the last ${win.label}.`
+  );
+}
+
+function renderTimeframeButtons() {
+  tfRow.innerHTML = '';
+  for (const win of rollups.windows) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'tf';
+    btn.textContent = win.label;
+    btn.dataset.key = win.key;
+    btn.disabled = !win.available;
+    if (!win.available) btn.title = win.reason;
+    btn.addEventListener('click', () => {
+      activeWindow = win.key;
+      renderTimeframe();
+    });
+    tfRow.appendChild(btn);
+  }
+}
+
+fetch('/api/rollups')
+  .then((r) => (r.ok ? r.json() : null))
+  .then((data) => {
+    if (!data || !data.windows) return;
+    rollups = data;
+
+    // Land on the widest window that actually has readings.
+    const withData = data.windows.filter((w) => w.available && w.readings > 0);
+    activeWindow = withData.length ? withData[withData.length - 1].key : '24h';
+
+    renderTimeframeButtons();
+    renderTimeframe();
+  })
+  .catch(() => {});

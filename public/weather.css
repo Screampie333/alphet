@@ -332,3 +332,149 @@
   .wx-day{grid-template-columns:52px 22px 26px 1fr 26px;gap:8px;}
   .wx-card{padding:14px;border-radius:16px;}
 }
+
+/* ============================================================
+   TIMEFRAME PANEL
+   The four signals rolled up over a selectable window, with the
+   change against the window before it.
+   ============================================================ */
+
+/* Delta colours are a status pair, not brand hues, and never appear without
+   an arrow beside them - colour is never the only thing carrying direction.
+   Both clear WCAG AA on the card surface (sage 9.5:1, terracotta 6.2:1). */
+:root{
+  --up:#8fd17a;
+  --down:#ff6b5a;
+}
+
+.tf-head{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  flex-wrap:wrap;
+  margin-bottom:14px;
+}
+.tf-title{
+  display:flex;
+  align-items:center;
+  gap:9px;
+  font-size:11px;
+  font-weight:700;
+  letter-spacing:0.13em;
+  text-transform:uppercase;
+  color:var(--text-dim);
+}
+.tf-title svg{width:14px;height:14px;}
+.tf-row{display:flex;gap:4px;margin-left:auto;}
+.tf{
+  font-family:var(--font-mono);
+  font-size:12px;
+  padding:5px 11px;
+  border-radius:8px;
+  border:1px solid transparent;
+  background:none;
+  color:var(--text-dim);
+  cursor:pointer;
+  transition:all .15s ease;
+}
+.tf:hover:not(:disabled){color:var(--text);background:rgba(251,241,226,0.06);}
+.tf.active{color:var(--ink);background:var(--sand);font-weight:700;}
+.tf:disabled{opacity:0.32;cursor:not-allowed;}
+
+.tf-cards{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+  gap:12px;
+}
+.tf-card{
+  min-width:0;
+  background:rgba(251,241,226,0.05);
+  border:1px solid var(--border);
+  border-radius:16px;
+  padding:16px 18px;
+}
+.tf-label{
+  font-size:12px;
+  color:var(--text-muted);
+  margin-bottom:10px;
+}
+.tf-value-row{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;}
+.tf-value{
+  font-family:var(--font-display);
+  font-size:25px;
+  line-height:1;
+  color:var(--text);
+}
+.tf-value .u{
+  font-family:var(--font-body);
+  font-size:12.5px;
+  font-weight:500;
+  color:var(--text-dim);
+  margin-left:2px;
+}
+.tf-delta{
+  font-family:var(--font-mono);
+  font-size:12.5px;
+  white-space:nowrap;
+}
+.tf-delta.up{color:var(--up);}
+.tf-delta.down{color:var(--down);}
+.tf-delta.flat{color:var(--text-dim);}
+
+/* the 0-100 sub-score under each signal, same meter as the detail tiles */
+.tf-score{
+  display:flex;
+  align-items:center;
+  gap:9px;
+  margin-top:12px;
+  font-family:var(--font-mono);
+  font-size:10.5px;
+  color:var(--text-dim);
+}
+.tf-score .bar{
+  flex:1;
+  height:4px;
+  border-radius:2px;
+  background:rgba(217,160,102,0.18);
+  overflow:hidden;
+}
+.tf-score .bar i{display:block;height:100%;border-radius:2px;background:var(--sand);}
+
+/* secondary counts */
+.tf-counts{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+  gap:14px;
+  margin-top:12px;
+  padding-top:14px;
+  border-top:1px solid var(--border-soft);
+}
+.tf-count .k{
+  font-size:10.5px;
+  letter-spacing:0.1em;
+  text-transform:uppercase;
+  color:var(--text-dim);
+  margin-bottom:5px;
+}
+.tf-count .v{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;}
+.tf-count .n{font-family:var(--font-mono);font-size:16px;color:var(--text);}
+
+/* coverage / unavailable messaging */
+.tf-cov{
+  font-size:12px;
+  color:var(--text-dim);
+  margin-top:12px;
+}
+.tf-cov strong{color:var(--text-muted);font-weight:500;}
+.tf-empty{
+  padding:26px 4px;
+  text-align:center;
+  color:var(--text-dim);
+  font-size:13px;
+}
+.tf-empty code{font-size:12px;}
+
+@media (max-width:520px){
+  .tf-row{margin-left:0;}
+  .tf-card{padding:14px;}
+}
