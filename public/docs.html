@@ -352,8 +352,9 @@ npm start       # keep running every 30 min</pre>
           </div>
 
           <div class="fgroup">
-            <h3>Graduation detection is unverified</h3>
-            <p>Graduations are rare enough that no test sample has caught one, so the matching logic has never been confirmed against a real event. If graduation counts sit at zero through a full day of live running, that's the first thing to check.</p>
+            <h3>Graduation is counted now, not sampled</h3>
+            <p>This used to be the weakest number here: graduations are roughly 0.003% of pump.fun traffic, so no affordable sample ever caught one. They are now read from the migration authority account (<code>39az…UJjg</code>), where ~81% of transactions are the pool creation that <em>is</em> a graduation, alongside creations from the mint authority (<code>TSLv…eokM</code>) at ~96% purity.</p>
+            <p>That drops a full day of counts from ~21,600 API calls to about 50, and makes them exact rather than extrapolated — for every window, with no stored history. Both purities are measured on each run rather than hardcoded, so the figures stay honest if pump.fun changes how those accounts are used.</p>
           </div>
 
           <div class="fgroup">

@@ -447,6 +447,17 @@ function deltaMarkup(changePercent, upIsGood) {
   };
 }
 
+// Build a count cell from chain numbers, matching the shape the snapshot
+// rollup produces so both render through the same code.
+function withChange(label, value, previous, upIsGood) {
+  return {
+    label,
+    upIsGood,
+    value,
+    changePercent: previous ? ((value - previous) / previous) * 100 : null
+  };
+}
+
 function renderTimeframe() {
   if (!rollups) return;
 
@@ -477,7 +488,25 @@ function renderTimeframe() {
   const cov = tfBody.querySelector('.tf-cov');
 
   for (const key of ['graduationRate', 'volume', 'rugRate', 'volatility']) {
-    const metric = win.metrics[key];
+    let metric = win.metrics[key];
+
+    // Graduation rate is counted straight off the chain when available, which
+    // needs no stored history and is exact rather than sampled. The snapshot
+    // rollup is the fallback for when the chain read failed.
+    if (key === 'graduationRate' && win.live && win.live.graduationRate !== null) {
+      metric = {
+        label: 'Graduation rate',
+        unit: '%',
+        decimals: 2,
+        upIsGood: true,
+        value: win.live.graduationRate,
+        changePercent: win.live.previous.graduationRate
+          ? ((win.live.graduationRate - win.live.previous.graduationRate) / win.live.previous.graduationRate) * 100
+          : null,
+        score: metric ? metric.score : null,
+        onChain: true
+      };
+    }
     if (!metric) continue;
 
     const delta = deltaMarkup(metric.changePercent, metric.upIsGood);
@@ -513,7 +542,12 @@ function renderTimeframe() {
   }
 
   for (const key of ['tokensCreated', 'tokensGraduated', 'tokensRugged']) {
-    const count = win.counts[key];
+    let count = win.counts[key];
+
+    if (win.live) {
+      if (key === 'tokensCreated') count = withChange('Created', win.live.created, win.live.previous.created, true);
+      if (key === 'tokensGraduated') count = withChange('Graduated', win.live.graduated, win.live.previous.graduated, true);
+    }
     if (!count) continue;
 
     const delta = deltaMarkup(count.changePercent, count.upIsGood);
@@ -536,11 +570,14 @@ function renderTimeframe() {
   // partly-filled 24h isn't read as a complete day.
   const partial = win.coveragePercent < 90;
   cov.innerHTML = '';
-  cov.append(
-    partial
-      ? `${win.readings} of ~${win.expectedReadings} readings — this ${win.label} window is about ${win.coveragePercent}% covered so far.`
-      : `${win.readings} readings across the last ${win.label}.`
-  );
+  // Say where each half of the panel comes from. Creation and graduation are
+  // counted on-chain and need no history; the rest waits on the collector.
+  const snapshotPart = win.readings === 0
+    ? `Volume, rug rate and volatility need the collector running — no snapshots in this window yet.`
+    : partial
+      ? `Volume, rug rate and volatility from ${win.readings} of ~${win.expectedReadings} readings (~${win.coveragePercent}% of this window).`
+      : `Volume, rug rate and volatility from ${win.readings} readings.`;
+  cov.append(win.live ? 'Created, graduated and graduation rate counted live on-chain. ' + snapshotPart : snapshotPart);
 }
 
 function renderTimeframeButtons() {

@@ -14,7 +14,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { config, ROOT } from "./config.js";
 import { latest, recent } from "./storage.js";
-import { rollupAll } from "./rollup.js";
+import { rollupAll, WINDOWS } from "./rollup.js";
+import { countWindows } from "./windows.js";
 
 const PUBLIC_DIR = path.join(ROOT, "public");
 
@@ -51,16 +52,80 @@ function serveHistory(res, requestUrl) {
   res.end(JSON.stringify({ snapshots }));
 }
 
-// Every timeframe in one response, so switching between 1h / 6h / 24h on the
-// page is instant instead of a fresh request each time.
+// Creation and graduation counts come straight off the chain (see windows.js),
+// which takes about a minute of paging - far too slow to do per request. One
+// cached result is shared by every visitor and refreshed in the background.
+const WINDOW_CACHE_MS = 5 * 60 * 1000;
+let windowCache = { at: 0, data: null, error: null, inFlight: null };
+
+function refreshWindowCounts() {
+  if (windowCache.inFlight) return windowCache.inFlight;
+
+  windowCache.inFlight = countWindows(WINDOWS)
+    .then((data) => {
+      windowCache = { at: Date.now(), data, error: null, inFlight: null };
+      return data;
+    })
+    .catch((err) => {
+      // Keep serving the last good numbers if we have them - a page showing
+      // slightly stale counts beats a page showing none.
+      windowCache = {
+        at: Date.now(),
+        data: windowCache.data,
+        error: err.message,
+        inFlight: null,
+      };
+      return null;
+    });
+
+  return windowCache.inFlight;
+}
+
+// Every timeframe in one response, so switching between 5m / 1h / 6h / 24h on
+// the page is instant instead of a fresh request each time.
 //
-// The widest window compares 24h against the 24h before it, so this needs
-// three days of snapshots on hand to cover that plus any clock drift.
-function serveRollups(res) {
-  const snapshots = recent(3);
+// Two sources are merged here:
+//   - created / graduated / graduation rate: counted live off the chain, so
+//     they are exact from the very first request with no stored history
+//   - volume / volatility / rug rate: rolled up from stored snapshots, which
+//     do need the collector to have been running
+async function serveRollups(res) {
+  const rolled = rollupAll(recent(3));
+
+  const stale = Date.now() - windowCache.at > WINDOW_CACHE_MS;
+  if (stale || !windowCache.data) {
+    // First request pays for the fetch; later ones ride the cache. If it
+    // fails, the snapshot-based numbers below still render.
+    await refreshWindowCounts();
+  }
+
+  const counts = windowCache.data;
+  if (counts) {
+    for (const win of rolled.windows) {
+      const live = counts.windows[win.key];
+      if (!live) continue;
+
+      win.live = {
+        created: live.created,
+        graduated: live.graduated,
+        graduationRate: live.graduationRate,
+        previous: live.previous,
+        measuredAt: counts.measuredAt,
+      };
+      // Chain counts don't depend on the collector, so a window with no
+      // snapshots behind it still has real numbers to show.
+      win.available = true;
+    }
+  }
 
   res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
-  res.end(JSON.stringify(rollupAll(snapshots)));
+  res.end(
+    JSON.stringify({
+      ...rolled,
+      liveCounts: Boolean(counts),
+      liveCountsError: windowCache.error,
+    })
+  );
 }
 
 function serveStatic(req, res) {
@@ -102,7 +167,10 @@ const server = http.createServer((req, res) => {
   }
 
   if (req.method === "GET" && route === "/api/rollups") {
-    serveRollups(res);
+    serveRollups(res).catch(() => {
+      res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
+      res.end(JSON.stringify({ error: "rollup failed" }));
+    });
     return;
   }
   serveStatic(req, res);
@@ -110,4 +178,27 @@ const server = http.createServer((req, res) => {
 
 server.listen(config.port, () => {
   console.log(`\n  Haboob web server running at http://localhost:${config.port}\n`);
+
+  // Paging the chain for window counts takes about a minute, so warm the
+  // cache now rather than making the first visitor wait for it. Refreshed on
+  // a timer afterwards so it never goes stale enough to matter.
+  if (config.heliusApiKey) {
+    console.log("  warming on-chain window counts (~1 min)...");
+    refreshWindowCounts().then((data) => {
+      if (data) {
+        const day = data.windows["24h"];
+        console.log(
+          `  ready: ${day.created.toLocaleString()} created / ${day.graduated.toLocaleString()} graduated in 24h ` +
+            `(${day.graduationRate.toFixed(2)}% graduation rate)\n`
+        );
+      } else {
+        console.log(`  window counts unavailable: ${windowCache.error}\n`);
+      }
+    });
+
+    const timer = setInterval(refreshWindowCounts, WINDOW_CACHE_MS);
+    timer.unref?.(); // don't hold the process open on its own account
+  } else {
+    console.log("  no HELIUS_API_KEY - window counts will fall back to stored snapshots\n");
+  }
 });
