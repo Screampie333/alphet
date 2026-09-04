@@ -17,6 +17,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { config } from "./config.js";
+import { countWindows } from "./windows.js";
 
 const HELIUS_URL = `https://mainnet.helius-rpc.com/?api-key=${config.heliusApiKey}`;
 
@@ -313,9 +314,23 @@ function tokensSentBy(event, mint, wallet) {
 }
 
 // 1. How many tokens were created, and how many graduated?
+//
+// Not from the sample. Graduations are ~0.003% of pump.fun traffic, so a
+// 30-second sample of the main program catches zero of them essentially
+// always - and it did: every snapshot collected this way reported 0
+// graduated, which pinned the graduation sub-score at 50 permanently,
+// because a baseline of zero makes relativeScore fall back to neutral.
+//
+// windows.js counts both events directly off the accounts they all pass
+// through, so these are exact counts for the whole interval rather than a
+// sample scaled up - which is also why they must not be multiplied by
+// SAMPLE_SCALE afterwards.
 async function collectTokenCounts() {
-  const { creates, graduations } = await getWindowTransactions();
-  return { created: creates.length, graduated: graduations.length };
+  const intervalMs = config.intervalMinutes * 60 * 1000;
+  const counts = await countWindows([{ key: "interval", ms: intervalMs }]);
+  const window = counts.windows.interval;
+
+  return { created: window.created, graduated: window.graduated, exact: true };
 }
 
 // 2. How much total volume traded?
@@ -511,13 +526,16 @@ export async function collect({ mock = false } = {}) {
     collectVolatility(),
   ]);
 
-  // Counts and volume are rates, so they scale from the sample up to the full
-  // interval. The other two don't: avgPriceSwingPercent is a median ratio, and
-  // the rug numbers come off a watchlist that persists across runs - both
-  // already describe the whole population, not a per-minute count.
+  // Volume is sampled, so it scales from the sample up to the full interval.
+  // The creation and graduation counts do not: they are counted directly off
+  // the chain for the whole interval, so scaling them would multiply a
+  // complete number by 10. The other two don't scale either -
+  // avgPriceSwingPercent is a median ratio, and the rug numbers come off a
+  // watchlist that persists across runs; both already describe the whole
+  // population rather than a per-minute count.
   return {
-    tokensCreated: Math.round(counts.created * SAMPLE_SCALE),
-    tokensGraduated: Math.round(counts.graduated * SAMPLE_SCALE),
+    tokensCreated: counts.created,
+    tokensGraduated: counts.graduated,
     totalVolumeSol: Number((volume.totalSol * SAMPLE_SCALE).toFixed(2)),
     tokensRugged: rugs.count,
     activeTokens: rugs.activeTokens,
