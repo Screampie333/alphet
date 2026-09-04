@@ -1,51 +1,44 @@
 [
   {
-    "mint": "98QmCa9wE6nbUzYsRgFURppvGjzfdQQH7JPyVC7Bpump",
-    "creator": "GiLYsnS7gc7j7Tz5zriTKewvfhijEVFaYok9jWGPH38c",
-    "bought": 3564784.053155,
+    "mint": "6fak67kX2JHnjE3cTM9UVkH1MKY7LiyWSHpysTPTpump",
+    "creator": "EpZk3i3P3X191fQGJhQ4x7Jpi7KuGosK3abLYJ1t8p8R",
+    "bought": 346837.044007,
     "sold": 0,
-    "createdAt": 1788537124272
+    "createdAt": 1788539090960
   },
   {
-    "mint": "5MeG8HZp1pUD5fvyHcYCWtSxxEgbub7DBsWcU2cVpump",
-    "creator": "2cZzmEkofEXzp6L7hjyKr2TdfPYsMzxLRCKANFbwDJ7J",
-    "bought": 12943713.271185,
+    "mint": "72h7kq81kNavUTLkvjf4k2iF8Ya2FpGz1C995HJZpump",
+    "creator": "EozgygtWhXRV2g2cxwmPQfZ6n48hkMANhKLsL1MRdTWE",
+    "bought": 7018806.171954,
     "sold": 0,
-    "createdAt": 1788537124272
+    "createdAt": 1788539090960
   },
   {
-    "mint": "MSn8xRtn8SgcWKeFQLmhmvt2P7LsyakHuBhxACEpump",
-    "creator": "9HE6r7YdfXQEnekA7gPeXZLnd3hUKvQEqpdT8SzXEkZN",
-    "bought": 8780451.425543,
+    "mint": "9tg5PBA9QyxXaxErFcRhynn9c439QVfF8EuB6ogXpump",
+    "creator": "AzqLQeiD2Yj5BhaY953vodwmuvzYbRArjkDvTDHdZxXq",
+    "bought": 2120630.001336,
     "sold": 0,
-    "createdAt": 1788537124272
+    "createdAt": 1788539090960
   },
   {
-    "mint": "GxNC4yqHeVTG1eZdYtK7uD2Tv8b7gVDC3e9Xnm6ahmmZ",
-    "creator": "A77zEXZbtcyT2X2MNcys2mUeKH4KFeCSvYSRHWxc4GzZ",
-    "bought": 34281150.096027,
+    "mint": "E4qebi3jyJvbJRLaYjtbD5qQg7rwB23E5am3prgQpump",
+    "creator": "DSEbDU6obP74M9jCQhxQajkK3MV5bB29wnSTJL9prt1R",
+    "bought": 2115327.702796,
     "sold": 0,
-    "createdAt": 1788537124272
+    "createdAt": 1788539090960
   },
   {
-    "mint": "Em8ggtavkeX6Uja2vRcDANbrv2H3wq1QQCK9GvXwpump",
-    "creator": "6QrdAYi2tm2rjTeb1S5CjmFkHPToUS6357xLKhTonHqU",
-    "bought": 5271908.39536,
+    "mint": "9eBKBdkEcqJ5BQrEdBRkXzRbcDAatZJvEvGKvt4ppump",
+    "creator": "Aukc3TMQUeUoYqdQmbJgu89rAH72zzuspPQftHP9yivT",
+    "bought": 9448531.042342,
     "sold": 0,
-    "createdAt": 1788537124272
+    "createdAt": 1788539090960
   },
   {
-    "mint": "8aE8Fh3t9aGoSWjmgyEMV34sRzDziER6NJjVwrrrpump",
-    "creator": "4RS3wvVkkr27Dp1A2BvviXezS9Hcr4czzMk7sSQpBW2P",
-    "bought": 8780451.425543,
+    "mint": "AWrPEkfEFUaNrd5uZZt4vKbh5LjfcHcoJHds9hfH3qiq",
+    "creator": "3gyRUFaTqCM6aXSJGaAKprVvjRnZcu4yuwqvfMvp4H7z",
+    "bought": 66439628.426255,
     "sold": 0,
-    "createdAt": 1788537124272
-  },
-  {
-    "mint": "9aqZmFwQyZpthkG7yoTW9aaPFcEmhnaRXGxajpzCpump",
-    "creator": "HZAankLtxDzcrefAtxbuXrTup2zLWGKw5GKhEmrxARq5",
-    "bought": 353134.727201,
-    "sold": 0,
-    "createdAt": 1788537124272
+    "createdAt": 1788539090960
   }
 ]

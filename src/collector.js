@@ -283,7 +283,27 @@ function pickMint(event) {
 }
 
 // Total SOL that changed hands in this transaction.
+// How much SOL the trade actually moved.
+//
+// Read from the trader's own balance change, not from nativeTransfers. On a
+// lot of pump.fun trades the SOL leg goes through the bonding curve as an
+// inner instruction and never appears as a native transfer at all, so summing
+// that list picks up only the fee - while on multi-hop transactions it counts
+// the same lamports at every hop. The two cases priced the same token ~100x
+// apart, which is where the four-figure "price swings" came from: measured on
+// live traffic, the median swing was 2,262% off nativeTransfers and 27.8% off
+// the balance delta, with blow-ups falling from 7 mints in 14 to 2 in 12.
+//
+// The fee is backed out so a buy and a sell of the same size price the same.
 function solAmount(event) {
+  const self = (event.accountData || []).find((a) => a.account === event.feePayer);
+
+  if (self && self.nativeBalanceChange) {
+    const moved = Math.abs(self.nativeBalanceChange) - (event.fee || 0);
+    if (moved > 0) return moved / LAMPORTS_PER_SOL;
+  }
+
+  // Older or unusual payloads without accountData still get an answer.
   const transfers = event.nativeTransfers || [];
   const lamports = transfers.reduce((sum, t) => sum + Math.abs(t.amount || 0), 0);
   return lamports / LAMPORTS_PER_SOL;

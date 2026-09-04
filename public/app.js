@@ -297,7 +297,9 @@ function renderTiles(scores, raw) {
     ['Graduated', nf.format(raw.tokensGraduated)],
     ['Volume (SOL)', nf.format(Math.round(raw.totalVolumeSol))],
     ['Rugged', nf.format(raw.tokensRugged)],
-    ['Avg swing', raw.avgPriceSwingPercent + '%']
+    // Rounded: this is a ratio of ratios, so it arrives as a long float and
+    // renders as 4024.6111044235167% if handed straight to the page.
+    ['Avg swing', nf.format(Math.round(raw.avgPriceSwingPercent)) + '%']
   ];
 
   el.raw.innerHTML = '';
