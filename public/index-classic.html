@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Haboob — pump.fun weather report</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bungee&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#1c130d;
+  --bg-alt:#2a1c12;
+  --sand:#d9a066;
+  --rust:#c97a3e;
+  --cream:#e8b87a;
+  --ink:#120d09;
+  --text:#fbf1e2;
+  --text-muted:#c9ad8c;
+  --magenta:#ff2fb9;
+  --yellow:#ffe01a;
+  --blue:#3ba9f5;
+  --card-bg:rgba(251,241,226,0.05);
+  --card-border:rgba(251,241,226,0.14);
+  --font-display:'Bungee',cursive,'Segoe UI',sans-serif;
+  --font-body:'Space Grotesk','Segoe UI',system-ui,sans-serif;
+}
+:root:not([data-theme="light"]){
+  --bg:#1c130d; --bg-alt:#2a1c12; --text:#fbf1e2; --text-muted:#c9ad8c;
+  --card-bg:rgba(251,241,226,0.05); --card-border:rgba(251,241,226,0.14);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme]){ --bg:#1c130d; --bg-alt:#2a1c12; --text:#fbf1e2; --text-muted:#c9ad8c; }
+}
+:root[data-theme="dark"]{ --bg:#1c130d; --bg-alt:#2a1c12; --text:#fbf1e2; --text-muted:#c9ad8c; }
+
+*{box-sizing:border-box; margin:0; padding:0;}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--font-body);
+  line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+img,svg{max-width:100%;}
+a{color:inherit;}
+.wrap{max-width:1040px; margin:0 auto; padding:0 24px;}
+
+/* ---------- HERO ---------- */
+.hero{
+  position:relative;
+  overflow:hidden;
+  padding:88px 0 64px;
+  background:
+    radial-gradient(ellipse 700px 420px at 78% 8%, rgba(201,122,62,0.35), transparent 60%),
+    radial-gradient(ellipse 600px 400px at 15% 85%, rgba(59,169,245,0.10), transparent 60%),
+    var(--bg);
+  border-bottom:1px solid var(--card-border);
+}
+.hero-grid{
+  display:grid;
+  grid-template-columns:1.15fr 0.85fr;
+  gap:48px;
+  align-items:center;
+}
+.eyebrow-word{
+  display:inline-block;
+  font-family:var(--font-display);
+  font-size:15px;
+  color:var(--yellow);
+  letter-spacing:0.5px;
+  margin-bottom:18px;
+  padding:6px 14px;
+  border:2px solid var(--yellow);
+  transform:rotate(-2deg);
+}
+h1{
+  font-family:var(--font-display);
+  font-size:clamp(34px, 5.2vw, 58px);
+  line-height:1.08;
+  color:var(--text);
+  margin-bottom:20px;
+  text-shadow:3px 3px 0 rgba(0,0,0,0.35);
+}
+h1 .hl{color:var(--sand);}
+.hero p.lede{
+  font-size:17px;
+  color:var(--text-muted);
+  max-width:46ch;
+  margin-bottom:32px;
+}
+.hero-actions{display:flex; gap:14px; flex-wrap:wrap;}
+.btn{
+  font-family:var(--font-body);
+  font-weight:700;
+  font-size:15px;
+  padding:14px 24px;
+  border-radius:6px;
+  border:2px solid var(--ink);
+  cursor:pointer;
+  text-decoration:none;
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  transition:transform 0.15s ease;
+}
+.btn:hover{transform:translateY(-2px);}
+.btn-primary{background:var(--yellow); color:var(--ink);}
+.btn-ghost{background:transparent; color:var(--text); border-color:var(--card-border);}
+
+.mascot-stage{
+  position:relative;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.mascot-glow{
+  position:absolute;
+  width:280px; height:280px;
+  border-radius:50%;
+  background:var(--sand);
+  opacity:0.28;
+  filter:blur(2px);
+  transition:background 0.4s ease;
+}
+
+/* ---------- WEATHER PANEL ---------- */
+.panel{
+  background:var(--card-bg);
+  border:1px solid var(--card-border);
+  border-radius:14px;
+  padding:28px;
+  margin-top:40px;
+}
+.panel-top{
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+  flex-wrap:wrap;
+  gap:12px;
+  margin-bottom:18px;
+}
+.panel-label{font-size:13px; color:var(--text-muted);}
+.condition-name{
+  font-family:var(--font-display);
+  font-size:26px;
+  transition:color 0.3s ease;
+}
+.score-num{
+  font-family:var(--font-display);
+  font-size:44px;
+  transition:color 0.3s ease;
+}
+.condition-desc{font-size:14px; color:var(--text-muted); margin-bottom:20px;}
+.toggle-row{display:flex; gap:8px; flex-wrap:wrap;}
+.toggle-btn{
+  font-family:var(--font-body);
+  font-size:13px;
+  font-weight:500;
+  padding:8px 14px;
+  border-radius:20px;
+  border:1px solid var(--card-border);
+  background:transparent;
+  color:var(--text-muted);
+  cursor:pointer;
+  transition:all 0.15s ease;
+}
+.toggle-btn.active{background:var(--sand); color:var(--ink); border-color:var(--sand); font-weight:700;}
+
+/* ---------- SECTIONS ---------- */
+section{padding:72px 0;}
+.section-title{
+  font-family:var(--font-display);
+  font-size:clamp(24px, 3vw, 32px);
+  margin-bottom:12px;
+}
+.section-sub{color:var(--text-muted); max-width:56ch; margin-bottom:40px; font-size:15px;}
+
+.metrics-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));
+  gap:16px;
+}
+.metric-card{
+  background:var(--card-bg);
+  border:1px solid var(--card-border);
+  border-radius:12px;
+  padding:22px;
+}
+.metric-name{font-size:13px; color:var(--text-muted); margin-bottom:10px;}
+.metric-value{font-family:var(--font-display); font-size:28px; margin-bottom:12px;}
+.bar-track{height:8px; background:rgba(251,241,226,0.1); border-radius:4px; overflow:hidden;}
+.bar-fill{height:100%; border-radius:4px; transition:width 0.4s ease, background 0.4s ease;}
+
+.split{
+  display:grid;
+  grid-template-columns:0.9fr 1.1fr;
+  gap:48px;
+  align-items:center;
+}
+.split .section-title{margin-bottom:16px;}
+.split p{color:var(--text-muted); font-size:15px; margin-bottom:14px; max-width:52ch;}
+
+.utility-list{list-style:none; display:grid; gap:14px;}
+.utility-list li{
+  display:flex;
+  gap:14px;
+  background:var(--card-bg);
+  border:1px solid var(--card-border);
+  border-radius:12px;
+  padding:18px 20px;
+  font-size:14.5px;
+}
+.utility-tag{
+  font-family:var(--font-display);
+  font-size:12px;
+  color:var(--yellow);
+  flex-shrink:0;
+  width:64px;
+}
+
+.cta-band{
+  background:linear-gradient(135deg, var(--rust), var(--sand));
+  border-radius:16px;
+  padding:44px 36px;
+  text-align:center;
+}
+.cta-band h2{
+  font-family:var(--font-display);
+  font-size:clamp(22px,3vw,30px);
+  color:var(--ink);
+  margin-bottom:10px;
+}
+.cta-band p{color:rgba(18,13,9,0.75); margin-bottom:24px; font-size:15px;}
+.cta-band .btn-primary{background:var(--ink); color:var(--yellow); border-color:var(--ink);}
+
+footer{
+  padding:32px 0 48px;
+  text-align:center;
+  color:var(--text-muted);
+  font-size:12.5px;
+  border-top:1px solid var(--card-border);
+}
+footer .disclaimer{max-width:60ch; margin:0 auto 8px;}
+
+@media (max-width:760px){
+  .hero-grid, .split{grid-template-columns:1fr;}
+  .mascot-stage{order:-1;}
+}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <span class="eyebrow-word">pump.fun weather</span>
+      <h1>Check the market weather<br>before you <span class="hl">ape in.</span></h1>
+      <p class="lede">Haboob reads pump.fun's on-chain data every hour — graduation rate, volume, rug rate, volatility — and turns it into one weather report you can read in 5 seconds.</p>
+      <div class="hero-actions">
+        <a href="#" class="btn btn-primary">Watch the live report</a>
+        <a href="#utility" class="btn btn-ghost">See token utility</a>
+      </div>
+
+      <div class="panel">
+        <div class="panel-top">
+          <div>
+            <div class="panel-label" id="panelLabel">Current condition (demo)</div>
+            <div class="condition-name" id="condName">Cloudy</div>
+          </div>
+          <div style="text-align:right;">
+            <div class="panel-label">Weather index</div>
+            <div class="score-num" id="scoreNum">54</div>
+          </div>
+        </div>
+        <p class="condition-desc" id="condDesc">Normal volume, no clear trend either way. Time to wait, not to rush in.</p>
+        <div class="toggle-row" id="toggleRow"></div>
+      </div>
+    </div>
+
+    <div class="mascot-stage">
+      <div class="mascot-glow" id="mascotGlow"></div>
+      <svg viewBox="0 0 400 400" width="320" height="320" role="img" aria-label="Haboob mascot">
+        <g id="motionLines" stroke-width="4" fill="none" opacity="0.8">
+          <path d="M330 160 Q365 135 358 95" stroke="#3ba9f5" stroke-linecap="round" stroke-dasharray="1 9"/>
+          <path d="M70 170 Q35 148 44 108" stroke="#ff2fb9" stroke-linecap="round" stroke-dasharray="1 9"/>
+        </g>
+        <path d="M115 178 Q92 100 168 68 Q240 40 302 78 Q362 112 350 190 Q340 250 272 282 Q220 302 162 282 Q108 260 115 178 Z"
+              fill="#e8935a" stroke="#0a0a0a" stroke-width="10" stroke-linejoin="round" id="dishBody"/>
+        <path d="M140 138 Q170 92 236 84 Q292 78 328 116" fill="none" stroke="#ffffff" stroke-width="7" stroke-linecap="round"/>
+        <g stroke="#0a0a0a" stroke-width="6" fill="none">
+          <circle cx="168" cy="168" r="20"/>
+          <circle cx="290" cy="162" r="20"/>
+        </g>
+        <circle cx="168" cy="168" r="7" fill="#0a0a0a"/>
+        <circle cx="290" cy="162" r="7" fill="#0a0a0a"/>
+        <ellipse cx="228" cy="220" rx="30" ry="20" fill="#0a0a0a" id="mouthShape"/>
+        <ellipse cx="228" cy="214" rx="19" ry="10" fill="#ffffff"/>
+        <line x1="228" y1="286" x2="180" y2="360" stroke="#0a0a0a" stroke-width="8" stroke-linecap="round"/>
+        <line x1="228" y1="286" x2="228" y2="368" stroke="#0a0a0a" stroke-width="8" stroke-linecap="round"/>
+        <line x1="228" y1="286" x2="276" y2="360" stroke="#0a0a0a" stroke-width="8" stroke-linecap="round"/>
+        <circle cx="180" cy="360" r="8" fill="#0a0a0a"/>
+        <circle cx="228" cy="368" r="8" fill="#0a0a0a"/>
+        <circle cx="276" cy="360" r="8" fill="#0a0a0a"/>
+        <path d="M175 280 Q168 305 174 326" fill="none" stroke="#ff2fb9" stroke-width="9" stroke-linecap="round" id="drip1"/>
+        <path d="M228 292 Q235 312 230 330" fill="none" stroke="#ffe01a" stroke-width="9" stroke-linecap="round" id="drip2"/>
+        <path d="M270 280 Q278 300 272 316" fill="none" stroke="#3ba9f5" stroke-width="9" stroke-linecap="round" id="drip3"/>
+      </svg>
+    </div>
+  </div>
+</header>
+
+<section>
+  <div class="wrap">
+    <h2 class="section-title">Four things Haboob reads</h2>
+    <p class="section-sub">The weather index isn't a random number — it's combined from four on-chain signals pulled from pump.fun every hour.</p>
+    <div class="metrics-grid" id="metricsGrid"></div>
+  </div>
+</section>
+
+<section style="background:var(--bg-alt); border-top:1px solid var(--card-border); border-bottom:1px solid var(--card-border);">
+  <div class="wrap split">
+    <div class="mascot-stage" style="justify-content:flex-start;">
+      <svg viewBox="0 0 300 260" width="240" role="img" aria-label="Haboob dust storm illustration">
+        <ellipse cx="150" cy="180" rx="120" ry="60" fill="#c97a3e" opacity="0.5"/>
+        <ellipse cx="90" cy="150" rx="70" ry="40" fill="#e8b87a" opacity="0.6"/>
+        <ellipse cx="210" cy="160" rx="80" ry="42" fill="#c97a3e" opacity="0.4"/>
+        <path d="M60 100 Q150 40 240 100 Q260 150 210 190 Q150 220 90 190 Q40 150 60 100 Z"
+              fill="#e8935a" stroke="#0a0a0a" stroke-width="8" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div>
+      <h2 class="section-title">Why the name Haboob?</h2>
+      <p>Haboob is a real meteorology term — a massive wall of dust that appears out of nowhere and swallows the sky within minutes. No long warning, it's just suddenly there.</p>
+      <p>The pump.fun market often behaves exactly like that: quiet for hours, then suddenly a storm — either a wild pump or a wave of rugs. Haboob is built to catch that moment before the storm shows up on the chart.</p>
+    </div>
+  </div>
+</section>
+
+<section id="utility">
+  <div class="wrap">
+    <h2 class="section-title">Token utility</h2>
+    <p class="section-sub">Holding the token isn't just for speculation — it unlocks access to a deeper layer of data.</p>
+    <ul class="utility-list">
+      <li><span class="utility-tag">Early access</span><span>The daily report goes to holders 30 minutes before it's posted publicly on X.</span></li>
+      <li><span class="utility-tag">Deeper data</span><span>Per-category token breakdown, not just the combined index, for higher-tier holders.</span></li>
+      <li><span class="utility-tag">Voting</span><span>Holders vote on which token or event deserves to be flagged as that day's "extreme condition."</span></li>
+      <li><span class="utility-tag">History</span><span>Staking unlocks the historical score archive, so you can backtest how accurate the forecast has been.</span></li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="cta-band">
+      <h2>Don't miss it when the storm hits</h2>
+      <p>The report runs daily. Join to get notified when market conditions shift drastically.</p>
+      <a href="#" class="btn btn-primary">Join the Telegram alert</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p class="disclaimer">This page is a design demo for Haboob. The numbers and weather conditions shown are illustrative examples — not yet connected to live on-chain data.</p>
+    <p>Haboob — pump.fun weather report</p>
+  </div>
+</footer>
+
+<script>
+const conditions = [
+  {
+    key:'sunny', label:'Sunny', score:82,
+    desc:'Lots of tokens graduating, high volume, positive sentiment. The friendliest condition to enter.',
+    color:'#ffe01a', bar:'#ffe01a',
+    mouth:{rx:26,ry:16,cy:210}, eyesUp:true
+  },
+  {
+    key:'cloudy', label:'Cloudy', score:54,
+    desc:'Normal volume, no clear trend either way. Time to wait, not to rush in.',
+    color:'#e8b87a', bar:'#e8b87a',
+    mouth:{rx:20,ry:12,cy:216}, eyesUp:false
+  },
+  {
+    key:'overcast', label:'Overcast', score:34,
+    desc:"Volume is dropping, graduation rate is low, lots of tokens stuck on the bonding curve.",
+    color:'#3ba9f5', bar:'#3ba9f5',
+    mouth:{rx:22,ry:10,cy:222}, eyesUp:false
+  },
+  {
+    key:'storm', label:'Storm', score:18,
+    desc:'High rug rate, extreme volatility. Lots of tokens collapsing at the same time.',
+    color:'#ff2fb9', bar:'#ff2fb9',
+    mouth:{rx:30,ry:20,cy:222}, eyesUp:false
+  },
+  {
+    key:'extreme', label:'Extreme', score:96,
+    desc:'One token is going massively viral and dragging the whole market with it, or the opposite: everything crashing together.',
+    color:'#c97a3e', bar:'#c97a3e',
+    mouth:{rx:32,ry:22,cy:220}, eyesUp:true
+  }
+];
+
+const metrics = [
+  {name:'Graduation rate', key:'grad'},
+  {name:'Volume index', key:'vol'},
+  {name:'Rug rate', key:'rug'},
+  {name:'Volatility index', key:'volat'}
+];
+
+const metricValuesByCondition = {
+  sunny:    {grad:78, vol:88, rug:12, volat:40},
+  cloudy:   {grad:50, vol:52, rug:22, volat:35},
+  overcast: {grad:28, vol:30, rug:34, volat:30},
+  storm:    {grad:15, vol:60, rug:74, volat:88},
+  extreme:  {grad:65, vol:97, rug:45, volat:95}
+};
+
+const toggleRow = document.getElementById('toggleRow');
+const panelLabel = document.getElementById('panelLabel');
+const condName = document.getElementById('condName');
+const condDesc = document.getElementById('condDesc');
+const scoreNum = document.getElementById('scoreNum');
+const mascotGlow = document.getElementById('mascotGlow');
+const mouthShape = document.getElementById('mouthShape');
+const metricsGrid = document.getElementById('metricsGrid');
+
+function renderMetrics(condKey){
+  const vals = metricValuesByCondition[condKey];
+  metricsGrid.innerHTML = '';
+  metrics.forEach(m=>{
+    const v = vals[m.key];
+    const card = document.createElement('div');
+    card.className = 'metric-card';
+    card.innerHTML =
+      '<div class="metric-name">' + m.name + '</div>' +
+      '<div class="metric-value">' + v + '</div>' +
+      '<div class="bar-track"><div class="bar-fill" style="width:' + v + '%; background:var(--sand);"></div></div>';
+    metricsGrid.appendChild(card);
+  });
+}
+
+function setCondition(cond){
+  panelLabel.textContent = 'Current condition (demo)';
+  condName.textContent = cond.label;
+  condName.style.color = cond.color;
+  scoreNum.textContent = cond.score;
+  scoreNum.style.color = cond.color;
+  condDesc.textContent = cond.desc;
+  mascotGlow.style.background = cond.color;
+  mouthShape.setAttribute('rx', cond.mouth.rx);
+  mouthShape.setAttribute('ry', cond.mouth.ry);
+  mouthShape.setAttribute('cy', cond.mouth.cy);
+  renderMetrics(cond.key);
+
+  document.querySelectorAll('.toggle-btn').forEach(btn=>{
+    btn.classList.toggle('active', btn.dataset.key === cond.key);
+  });
+}
+
+conditions.forEach(cond=>{
+  const btn = document.createElement('button');
+  btn.className = 'toggle-btn';
+  btn.textContent = cond.label;
+  btn.dataset.key = cond.key;
+  btn.addEventListener('click', ()=> setCondition(cond));
+  toggleRow.appendChild(btn);
+});
+
+// Real sub-scores (graduation/rug/volatility) are already inverted so
+// "higher = better" - matching src/report.js's own labels ("Rug safety",
+// "Stability") instead of the demo grid's literal "Rug rate" wording.
+const liveMetricFields = [
+  { name: 'Graduation rate', key: 'graduation' },
+  { name: 'Volume index', key: 'volume' },
+  { name: 'Rug safety', key: 'rug' },
+  { name: 'Stability', key: 'volatility' }
+];
+
+function applyLiveSnapshot(snapshot){
+  const cond = conditions.find(c => c.key === snapshot.condition.key) || conditions[1];
+
+  panelLabel.textContent = 'Current condition (live)';
+  condName.textContent = snapshot.condition.label;
+  condName.style.color = cond.color;
+  scoreNum.textContent = snapshot.index;
+  scoreNum.style.color = cond.color;
+  condDesc.textContent = snapshot.condition.summary;
+  mascotGlow.style.background = cond.color;
+  mouthShape.setAttribute('rx', cond.mouth.rx);
+  mouthShape.setAttribute('ry', cond.mouth.ry);
+  mouthShape.setAttribute('cy', cond.mouth.cy);
+
+  metricsGrid.innerHTML = '';
+  liveMetricFields.forEach(m=>{
+    const v = snapshot.subScores[m.key];
+    const card = document.createElement('div');
+    card.className = 'metric-card';
+    card.innerHTML =
+      '<div class="metric-name">' + m.name + '</div>' +
+      '<div class="metric-value">' + v + '</div>' +
+      '<div class="bar-track"><div class="bar-fill" style="width:' + v + '%; background:var(--sand);"></div></div>';
+    metricsGrid.appendChild(card);
+  });
+
+  document.querySelectorAll('.toggle-btn').forEach(btn=>{
+    btn.classList.toggle('active', btn.dataset.key === snapshot.condition.key);
+  });
+}
+
+async function loadLiveSnapshot(){
+  try {
+    const res = await fetch('/api/latest');
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data && data.snapshot ? data.snapshot : null;
+  } catch (err) {
+    return null; // no server, offline, etc. - demo view stays as-is
+  }
+}
+
+// Paint the demo view immediately so the page never looks empty, then swap
+// in real data if a snapshot is available.
+setCondition(conditions[1]);
+loadLiveSnapshot().then(snapshot => {
+  if (snapshot) applyLiveSnapshot(snapshot);
+});
+</script>
+
+</body>
+</html>

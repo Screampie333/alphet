@@ -1,0 +1,34 @@
+[
+  {
+    "timestamp": "2026-09-04T04:28:03.955Z",
+    "index": 50,
+    "condition": {
+      "key": "cloudy",
+      "label": "Cloudy",
+      "emoji": "⛅",
+      "summary": "Normal volume, no clear trend either way. Nothing here rewards rushing."
+    },
+    "subScores": {
+      "graduation": 50,
+      "volume": 50,
+      "rug": 50,
+      "volatility": 50,
+      "rates": {
+        "graduationRatePercent": 1.55,
+        "rugRatePercent": 2.79,
+        "avgPriceSwingPercent": 17,
+        "volumeSol": 77563
+      }
+    },
+    "raw": {
+      "tokensCreated": 8044,
+      "tokensGraduated": 125,
+      "totalVolumeSol": 77563,
+      "tokensRugged": 79,
+      "activeTokens": 2834,
+      "avgPriceSwingPercent": 17,
+      "source": "mock"
+    },
+    "baselineSnapshots": 0
+  }
+]

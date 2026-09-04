@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Haboob — pump.fun weather report</title>
+<meta name="description" content="Haboob reads pump.fun on-chain data every 30 minutes and turns it into a single 0-100 weather index you can read in five seconds.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bungee&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- ============================================================
+     MOBILE TOP BAR
+     ============================================================ -->
+<div class="topbar">
+  <div class="brand">
+    <svg class="brand-mark" viewBox="0 0 400 400" aria-hidden="true"><use href="#mascot-mark"></use></svg>
+    <span class="brand-name">Haboob</span>
+  </div>
+  <button class="icon-btn" id="menuOpen" aria-label="Open menu" aria-expanded="false" aria-controls="sidebar">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 5h16"/><path d="M4 12h16"/><path d="M4 19h16"/></svg>
+  </button>
+</div>
+<div class="backdrop" id="backdrop"></div>
+
+<!-- ============================================================
+     SIDEBAR
+     ============================================================ -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-head">
+    <a class="brand" href="#top">
+      <svg class="brand-mark" viewBox="0 0 400 400" role="img" aria-label="Haboob"><use href="#mascot-mark"></use></svg>
+      <span class="brand-name">Haboob<small>Weather report</small></span>
+    </a>
+    <button class="icon-btn" id="menuClose" aria-label="Close menu" style="display:none;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+    </button>
+  </div>
+
+  <div class="sidebar-body">
+    <div class="nav-group">
+      <h2 class="nav-label">Navigate</h2>
+      <nav id="nav">
+        <a class="nav-item active" href="#report" data-target="report">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+          <span>Today's report</span>
+        </a>
+        <a class="nav-item" href="#signals" data-target="signals">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg>
+          <span>The four signals</span>
+        </a>
+        <a class="nav-item" href="#scale" data-target="scale">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/><path d="M13.4 10.6 19 5"/><path d="M20.7 17A9 9 0 1 0 3.3 17"/></svg>
+          <span>Reading the index</span>
+        </a>
+        <a class="nav-item" href="#why" data-target="why">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.8 19.6A2 2 0 1 0 14 16H2"/><path d="M17.5 8a2.5 2.5 0 1 1 2 4H2"/><path d="M9.8 4.4A2 2 0 1 1 11 8H2"/></svg>
+          <span>Why "Haboob"</span>
+        </a>
+        <a class="nav-item" href="#utility" data-target="utility">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><path d="M18.09 10.37A6 6 0 1 1 10.34 18"/><path d="M7 6h1v4"/><path d="m16.71 13.88.7.71-2.82 2.82"/></svg>
+          <span>Token utility</span>
+        </a>
+      </nav>
+    </div>
+
+    <div class="nav-group">
+      <h2 class="nav-label">Resources</h2>
+      <nav>
+        <a class="nav-item" href="https://github.com/" target="_blank" rel="noopener noreferrer">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
+          <span>Docs</span>
+          <svg class="ext" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
+        </a>
+        <a class="nav-item" href="https://x.com/" target="_blank" rel="noopener noreferrer">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 4s-.7 2.1-2 3.4c1.6 10-9.4 17.3-18 11.6 2.2.1 4.4-.6 6-2C3 15.5.5 9.6 3 5c2.2 2.6 5.6 4.1 9 4-.9-4.2 4-6.6 7-3.8 1.1 0 3-1.2 3-1.2z"/></svg>
+          <span>@haboob</span>
+          <svg class="ext" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
+        </a>
+      </nav>
+    </div>
+
+    <div class="nav-group">
+      <h2 class="nav-label">Contract</h2>
+      <button type="button" class="ca-btn" id="caBtn" title="Click to copy contract address" aria-label="Copy contract address">
+        <span class="ca-text">
+          <span class="ca-label">Address</span>
+          <span class="ca-value" id="caValue">Coming soon</span>
+        </span>
+        <svg class="ca-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+      </button>
+    </div>
+
+    <div class="nav-group">
+      <h2 class="nav-label">Feed status</h2>
+      <div class="status">
+        <span class="dot" id="statusDot"></span>
+        <span id="statusText">Demo data</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="sidebar-foot">
+    <button class="btn-cta" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.268 21a2 2 0 0 0 3.464 0"/><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/></svg>
+      <span>Get storm alerts</span>
+    </button>
+  </div>
+</aside>
+
+<!-- ============================================================
+     MAIN
+     ============================================================ -->
+<main class="main" id="top">
+
+  <!-- hero + live report -->
+  <section class="hero" id="report">
+    <div class="page">
+      <span class="eyebrow">pump.fun weather</span>
+      <h1>Check the market weather<br>before you <span class="hl">ape in.</span></h1>
+      <p class="lede">Haboob reads pump.fun's on-chain data every 30 minutes — graduation rate, volume, rug rate, volatility — and folds it into one number you can read in five seconds.</p>
+
+      <div class="report">
+        <div>
+          <div class="report-head">
+            <div>
+              <div class="kicker" id="panelLabel">Current condition · demo</div>
+              <div class="cond-name" id="condName">Cloudy</div>
+            </div>
+            <div class="score-wrap">
+              <div class="kicker">Weather index</div>
+              <div class="score" id="scoreNum">54</div>
+            </div>
+          </div>
+          <p class="cond-desc" id="condDesc">Normal volume, no clear trend either way. Time to wait, not to rush in.</p>
+          <div class="chips" id="chips"></div>
+        </div>
+
+        <div class="mascot">
+          <div class="mascot-glow" id="mascotGlow"></div>
+          <svg viewBox="0 0 400 400" width="230" height="230" role="img" aria-label="Haboob mascot">
+            <g stroke-width="4" fill="none" opacity="0.8">
+              <path d="M330 160 Q365 135 358 95" stroke="#3ba9f5" stroke-linecap="round" stroke-dasharray="1 9"/>
+              <path d="M70 170 Q35 148 44 108" stroke="#ff2fb9" stroke-linecap="round" stroke-dasharray="1 9"/>
+            </g>
+            <path d="M115 178 Q92 100 168 68 Q240 40 302 78 Q362 112 350 190 Q340 250 272 282 Q220 302 162 282 Q108 260 115 178 Z"
+                  fill="#e8935a" stroke="#0a0a0a" stroke-width="10" stroke-linejoin="round"/>
+            <path d="M140 138 Q170 92 236 84 Q292 78 328 116" fill="none" stroke="#ffffff" stroke-width="7" stroke-linecap="round"/>
+            <g stroke="#0a0a0a" stroke-width="6" fill="none">
+              <circle cx="168" cy="168" r="20"/>
+              <circle cx="290" cy="162" r="20"/>
+            </g>
+            <circle cx="168" cy="168" r="7" fill="#0a0a0a"/>
+            <circle cx="290" cy="162" r="7" fill="#0a0a0a"/>
+            <ellipse cx="228" cy="220" rx="30" ry="20" fill="#0a0a0a" id="mouthShape"/>
+            <ellipse cx="228" cy="214" rx="19" ry="10" fill="#ffffff"/>
+            <line x1="228" y1="286" x2="180" y2="360" stroke="#0a0a0a" stroke-width="8" stroke-linecap="round"/>
+            <line x1="228" y1="286" x2="228" y2="368" stroke="#0a0a0a" stroke-width="8" stroke-linecap="round"/>
+            <line x1="228" y1="286" x2="276" y2="360" stroke="#0a0a0a" stroke-width="8" stroke-linecap="round"/>
+            <circle cx="180" cy="360" r="8" fill="#0a0a0a"/>
+            <circle cx="228" cy="368" r="8" fill="#0a0a0a"/>
+            <circle cx="276" cy="360" r="8" fill="#0a0a0a"/>
+            <path d="M175 280 Q168 305 174 326" fill="none" stroke="#ff2fb9" stroke-width="9" stroke-linecap="round"/>
+            <path d="M228 292 Q235 312 230 330" fill="none" stroke="#ffe01a" stroke-width="9" stroke-linecap="round"/>
+            <path d="M270 280 Q278 300 272 316" fill="none" stroke="#3ba9f5" stroke-width="9" stroke-linecap="round"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- four signals -->
+  <section class="block" id="signals">
+    <div class="page">
+      <h2 class="section-title">Four things Haboob reads</h2>
+      <p class="section-sub">The index isn't a mood. It's four on-chain signals, each scored 0–100 against your own recent history, then weighted into one number.</p>
+      <div class="grid" id="signalGrid"></div>
+
+      <dl class="readout" id="readout"></dl>
+    </div>
+  </section>
+
+  <!-- index scale -->
+  <section class="block" id="scale">
+    <div class="page">
+      <h2 class="section-title">Reading the index</h2>
+      <p class="section-sub">Five conditions, four thresholds. Extreme ignores the index entirely — when swings get wild enough, the average stops meaning anything and you just need the warning.</p>
+      <div class="scale" id="scaleGrid"></div>
+    </div>
+  </section>
+
+  <!-- why the name -->
+  <section class="block" id="why">
+    <div class="page split">
+      <div class="mascot" style="justify-content:flex-start;">
+        <svg viewBox="0 0 300 260" width="270" height="234" role="img" aria-label="Haboob dust storm illustration">
+          <ellipse cx="150" cy="180" rx="120" ry="60" fill="#c97a3e" opacity="0.5"/>
+          <ellipse cx="90" cy="150" rx="70" ry="40" fill="#e8b87a" opacity="0.6"/>
+          <ellipse cx="210" cy="160" rx="80" ry="42" fill="#c97a3e" opacity="0.4"/>
+          <path d="M60 100 Q150 40 240 100 Q260 150 210 190 Q150 220 90 190 Q40 150 60 100 Z"
+                fill="#e8935a" stroke="#0a0a0a" stroke-width="8" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div>
+        <h2 class="section-title">Why the name Haboob?</h2>
+        <p>A haboob is a real meteorology term — a wall of dust that appears out of nowhere and swallows the sky within minutes. No long warning. It's just suddenly there.</p>
+        <p>pump.fun behaves the same way: quiet for hours, then a storm — a wild pump, or a wave of rugs. Haboob is built to catch that shift before it shows up on the chart.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- token utility -->
+  <section class="block" id="utility">
+    <div class="page">
+      <h2 class="section-title">Token utility</h2>
+      <p class="section-sub">Holding isn't just speculation — it unlocks the layer underneath the public number.</p>
+      <ul class="utility">
+        <li><span class="tag">Early access</span><span>The daily report reaches holders 30 minutes before it's posted publicly on X.</span></li>
+        <li><span class="tag">Deeper data</span><span>Per-category token breakdown for higher-tier holders, not just the combined index.</span></li>
+        <li><span class="tag">Voting</span><span>Holders vote on which token or event gets flagged as the day's "extreme condition".</span></li>
+        <li><span class="tag">History</span><span>Staking unlocks the score archive, so you can backtest how accurate the forecast has been.</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- cta -->
+  <section class="block">
+    <div class="page">
+      <div class="cta">
+        <h2>Don't miss it when the storm hits</h2>
+        <p>The report runs every 30 minutes. Get pinged when conditions shift hard.</p>
+        <a class="btn-dark" href="#">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.854 2.147 10.914 13.087"/><path d="M21.854 2.147 15 21l-3.5-7.5L4 10z"/></svg>
+          <span>Join the Telegram alert</span>
+        </a>
+      </div>
+
+      <div class="foot">
+        <p id="footNote">This page is a design demo. The numbers shown are illustrative until a live snapshot is available at /api/latest.</p>
+        <p>Haboob — pump.fun weather report</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- dune art, pinned bottom, behind everything -->
+<div class="dune" aria-hidden="true">
+  <svg viewBox="0 0 1200 190" preserveAspectRatio="none">
+    <path d="M0 118 Q120 84 250 104 Q380 124 500 96 Q640 64 780 100 Q900 130 1030 106 Q1130 88 1200 100 L1200 190 L0 190 Z" fill="#c97a3e" opacity="0.34"/>
+    <path d="M0 150 Q160 118 300 140 Q440 162 590 138 Q740 114 880 142 Q1020 168 1200 138 L1200 190 L0 190 Z" fill="#d9a066" opacity="0.28"/>
+    <path d="M0 176 Q200 156 420 172 Q640 188 860 168 Q1040 152 1200 170 L1200 190 L0 190 Z" fill="#e8b87a" opacity="0.22"/>
+  </svg>
+</div>
+
+<!-- shared mascot mark used by the sidebar + mobile bar -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <g id="mascot-mark">
+    <path d="M115 178 Q92 100 168 68 Q240 40 302 78 Q362 112 350 190 Q340 250 272 282 Q220 302 162 282 Q108 260 115 178 Z"
+          fill="#e8935a" stroke="#0a0a0a" stroke-width="14" stroke-linejoin="round"/>
+    <path d="M140 138 Q170 92 236 84 Q292 78 328 116" fill="none" stroke="#ffffff" stroke-width="9" stroke-linecap="round"/>
+    <circle cx="168" cy="168" r="14" fill="#0a0a0a"/>
+    <circle cx="290" cy="162" r="14" fill="#0a0a0a"/>
+    <ellipse cx="228" cy="222" rx="26" ry="17" fill="#0a0a0a"/>
+    <line x1="228" y1="286" x2="180" y2="360" stroke="#0a0a0a" stroke-width="12" stroke-linecap="round"/>
+    <line x1="228" y1="286" x2="228" y2="368" stroke="#0a0a0a" stroke-width="12" stroke-linecap="round"/>
+    <line x1="228" y1="286" x2="276" y2="360" stroke="#0a0a0a" stroke-width="12" stroke-linecap="round"/>
+  </g>
+</svg>
+
+<script src="app.js"></script>
+</body>
+</html>
