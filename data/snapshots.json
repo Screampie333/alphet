@@ -1,6 +1,6 @@
 [
   {
-    "timestamp": "2026-09-04T04:28:03.955Z",
+    "timestamp": "2026-09-04T15:18:13.509Z",
     "index": 50,
     "condition": {
       "key": "cloudy",
@@ -14,20 +14,21 @@
       "rug": 50,
       "volatility": 50,
       "rates": {
-        "graduationRatePercent": 1.55,
-        "rugRatePercent": 2.79,
-        "avgPriceSwingPercent": 17,
-        "volumeSol": 77563
+        "graduationRatePercent": 0,
+        "rugRatePercent": 25,
+        "avgPriceSwingPercent": 233.19079244965252,
+        "volumeSol": 936.93
       }
     },
     "raw": {
-      "tokensCreated": 8044,
-      "tokensGraduated": 125,
-      "totalVolumeSol": 77563,
-      "tokensRugged": 79,
-      "activeTokens": 2834,
-      "avgPriceSwingPercent": 17,
-      "source": "mock"
+      "tokensCreated": 100,
+      "tokensGraduated": 0,
+      "totalVolumeSol": 936.93,
+      "tokensRugged": 2,
+      "activeTokens": 8,
+      "avgPriceSwingPercent": 233.19079244965252,
+      "source": "live",
+      "sampleSeconds": 30
     },
     "baselineSnapshots": 0
   }

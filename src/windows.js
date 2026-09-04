@@ -60,32 +60,57 @@ async function rpc(method, params) {
   return json.result;
 }
 
-// Page backwards through one account's signatures until we pass the cutoff.
+// Signatures already fetched, per account, newest first. Refreshes only pull
+// what arrived since the last one instead of re-walking the whole 48 hours:
+// the first call costs ~94 paging calls, every later one costs about 2. Over
+// a day that's the difference between ~20,000 calls and ~600.
+const seen = new Map();
+
+// Page backwards through one account's signatures until we pass the cutoff,
+// or reach a signature we already have.
 async function signaturesSince(address, cutoffSeconds) {
-  const collected = [];
+  const cached = seen.get(address) || { list: [], newest: null };
+  const known = new Set(cached.list.map((s) => s.signature));
+
+  const fresh = [];
   let before;
+  let caughtUp = false;
 
   for (let page = 0; page < MAX_PAGES; page++) {
     const batch = await rpc("getSignaturesForAddress", [address, { limit: 1000, before }]);
     if (!batch.length) break;
 
-    let reachedCutoff = false;
+    let stop = false;
     for (const item of batch) {
+      // Reaching something we already hold means the gap is closed - every
+      // older signature is already cached.
+      if (known.has(item.signature)) {
+        caughtUp = true;
+        stop = true;
+        break;
+      }
       if (item.blockTime && item.blockTime < cutoffSeconds) {
-        reachedCutoff = true;
+        stop = true;
         break;
       }
       // Failed transactions created nothing and graduated nothing.
       if (!item.err && item.blockTime) {
-        collected.push({ signature: item.signature, blockTime: item.blockTime });
+        fresh.push({ signature: item.signature, blockTime: item.blockTime });
       }
     }
 
-    if (reachedCutoff) break;
+    if (stop) break;
     before = batch[batch.length - 1].signature;
   }
 
-  return collected;
+  // Newest first throughout, so the fresh page sits on the front. Anything
+  // older than the window we care about is dropped rather than accumulating.
+  const merged = (caughtUp ? [...fresh, ...cached.list] : fresh).filter(
+    (s) => s.blockTime >= cutoffSeconds
+  );
+
+  seen.set(address, { list: merged, newest: merged[0]?.signature || null });
+  return merged;
 }
 
 // What share of an account's successful transactions are actually the event

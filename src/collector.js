@@ -248,11 +248,37 @@ function classify(events) {
 
 // --- small helpers shared by the collect* functions below ---
 
-// Which token this transaction moved (pump.fun trades touch one token at a
-// time).
+// Mints that show up inside pump.fun transactions but are not the token being
+// traded - a swap routed through USDC leaves a USDC transfer in the same
+// transaction, and picking that as "the token" produces nonsense prices.
+const NOT_THE_TRADED_TOKEN = new Set([
+  "So11111111111111111111111111111111111111112", // wrapped SOL
+  "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", // USDC
+  "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB", // USDT
+]);
+
+// Which token this transaction moved. pump.fun trades touch one token at a
+// time, but the transfer list can also carry the quote leg, so take the mint
+// that actually moved the most rather than whichever happens to be first.
 function pickMint(event) {
   const transfers = event.tokenTransfers || [];
-  return transfers.length ? transfers[0].mint : null;
+
+  const totals = new Map();
+  for (const transfer of transfers) {
+    if (!transfer.mint || NOT_THE_TRADED_TOKEN.has(transfer.mint)) continue;
+    const moved = Math.abs(transfer.tokenAmount || 0);
+    totals.set(transfer.mint, (totals.get(transfer.mint) || 0) + moved);
+  }
+
+  let best = null;
+  let bestAmount = 0;
+  for (const [mint, amount] of totals) {
+    if (amount > bestAmount) {
+      best = mint;
+      bestAmount = amount;
+    }
+  }
+  return best;
 }
 
 // Total SOL that changed hands in this transaction.
@@ -390,6 +416,20 @@ async function collectRugs() {
   return { count: ruggedCount, activeTokens: stillWatching.length };
 }
 
+// Volatility guards, both set from live measurement rather than taste:
+// trades under this much SOL are fee-and-rent noise whose implied price is
+// meaningless, and a mint needs this many surviving trades before its price
+// range is worth reading.
+const MIN_TRADE_SOL = 0.001;
+const MIN_TRADES_FOR_SWING = 5;
+
+// Value at a percentile of an already-sorted array.
+function percentile(sorted, p) {
+  if (!sorted.length) return 0;
+  const index = Math.min(sorted.length - 1, Math.floor(p * sorted.length));
+  return sorted[index];
+}
+
 // 4. How wild were the price swings?
 async function collectVolatility() {
   const { trades } = await getWindowTransactions();
@@ -406,26 +446,40 @@ async function collectVolatility() {
     const tokens = tokenAmount(trade, mint);
     if (!sol || !tokens) continue;
 
+    // Skip dust. Below this the SOL leg is mostly fees and rent rather than
+    // the trade itself, so the implied price says nothing about the market -
+    // and being near zero, it distorts every range it lands in.
+    if (sol < MIN_TRADE_SOL) continue;
+
     if (!byMint.has(mint)) byMint.set(mint, { prices: [], volumeSol: 0 });
     const entry = byMint.get(mint);
     entry.prices.push(sol / tokens);
     entry.volumeSol += sol;
   }
 
-  // Need at least a few trades to call it a "swing" - a token with only 1-2
-  // trades will show a huge ratio just because pump.fun's bonding curve
-  // price rises fast early on, not because anything unusual happened.
+  // Need enough trades for a range to mean anything. Three was too few: with
+  // that little to go on, percentiles can't trim anything and one odd trade
+  // still sets the answer.
   const topMints = [...byMint.values()]
-    .filter((entry) => entry.prices.length >= 3)
+    .filter((entry) => entry.prices.length >= MIN_TRADES_FOR_SWING)
     .sort((a, b) => b.volumeSol - a.volumeSol)
     .slice(0, 20);
 
   if (!topMints.length) return { avgSwingPercent: 0 };
 
+  // The 10th and 90th percentile, not the outright min and max.
+  //
+  // min/max is as outlier-sensitive as a measure can be, and the outliers
+  // here are real: a trade moving 0.000005 SOL against millions of tokens
+  // implies a price near zero, and (max - min) / min then explodes. Measured
+  // live, one mint read 288,760% on min/max against 10,374% on p10/p90, and
+  // the run's overall figure came out at 24,018% - which is not a market
+  // condition, it is dust.
   const swings = topMints.map(({ prices }) => {
-    const min = Math.min(...prices);
-    const max = Math.max(...prices);
-    return min > 0 ? ((max - min) / min) * 100 : 0;
+    const sorted = [...prices].sort((a, b) => a - b);
+    const low = percentile(sorted, 0.1);
+    const high = percentile(sorted, 0.9);
+    return low > 0 ? ((high - low) / low) * 100 : 0;
   });
 
   // Median, not mean - one wild token shouldn't drag the whole number.
