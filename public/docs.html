@@ -355,6 +355,7 @@ npm start       # keep running every 30 min</pre>
             <h3>Graduation is counted now, not sampled</h3>
             <p>This used to be the weakest number here: graduations are roughly 0.003% of pump.fun traffic, so no affordable sample ever caught one. They are now read from the migration authority account (<code>39az…UJjg</code>), where ~81% of transactions are the pool creation that <em>is</em> a graduation, alongside creations from the mint authority (<code>TSLv…eokM</code>) at ~96% purity.</p>
             <p>That drops a full day of counts from ~21,600 API calls to about 50, and makes them exact rather than extrapolated — for every window, with no stored history. Both purities are measured on each run rather than hardcoded, so the figures stay honest if pump.fun changes how those accounts are used.</p>
+            <p>The collector reads the same source, so the graduation sub-score can actually move. Sampling reported zero graduations on every single run, and a baseline of zero makes the relative score fall back to a neutral 50 — which meant the heaviest-weighted signal in the index was a constant.</p>
           </div>
 
           <div class="fgroup">
