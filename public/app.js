@@ -244,91 +244,12 @@ for (const cond of conditions) {
 }
 
 /* ------------------------------------------------------------------
-   SIDEBAR SHELL
+   SIDEBAR SHELL  (shared behaviour lives in shell.js)
    ------------------------------------------------------------------ */
 
-const sidebar = document.getElementById('sidebar');
-const backdrop = document.getElementById('backdrop');
-const menuOpen = document.getElementById('menuOpen');
-const menuClose = document.getElementById('menuClose');
-
-function setDrawer(open) {
-  sidebar.classList.toggle('open', open);
-  backdrop.classList.toggle('open', open);
-  menuOpen.setAttribute('aria-expanded', String(open));
-  menuClose.style.display = open ? 'inline-flex' : 'none';
-}
-
-menuOpen.addEventListener('click', () => setDrawer(true));
-menuClose.addEventListener('click', () => setDrawer(false));
-backdrop.addEventListener('click', () => setDrawer(false));
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') setDrawer(false);
-});
-
-// Tapping a nav link on mobile should close the drawer behind you.
-document.querySelectorAll('.nav-item[data-target]').forEach(item => {
-  item.addEventListener('click', () => setDrawer(false));
-});
-
-// Copy the contract address. Falls back to a temporary textarea where the
-// async clipboard API isn't available (http:// origins, older browsers).
-const caBtn = document.getElementById('caBtn');
-const caValue = document.getElementById('caValue');
-const CONTRACT_ADDRESS = ''; // paste the real address here once it exists
-
-caBtn.addEventListener('click', async () => {
-  if (!CONTRACT_ADDRESS) {
-    flashCa('Not live yet');
-    return;
-  }
-  try {
-    if (navigator.clipboard) {
-      await navigator.clipboard.writeText(CONTRACT_ADDRESS);
-    } else {
-      const tmp = document.createElement('textarea');
-      tmp.value = CONTRACT_ADDRESS;
-      document.body.appendChild(tmp);
-      tmp.select();
-      document.execCommand('copy');
-      tmp.remove();
-    }
-    flashCa('Copied!');
-  } catch {
-    flashCa('Copy failed');
-  }
-});
-
-function flashCa(message) {
-  const original = caValue.textContent;
-  caValue.textContent = message;
-  caValue.classList.add('copied');
-  setTimeout(() => {
-    caValue.textContent = original;
-    caValue.classList.remove('copied');
-  }, 1400);
-}
-
-if (CONTRACT_ADDRESS) {
-  caValue.textContent = CONTRACT_ADDRESS.slice(0, 4) + '…' + CONTRACT_ADDRESS.slice(-4);
-}
-
-// Highlight the nav item for whichever section is currently in view.
-const navItems = [...document.querySelectorAll('.nav-item[data-target]')];
-const sections = navItems
-  .map(item => document.getElementById(item.dataset.target))
-  .filter(Boolean);
-
-const spy = new IntersectionObserver(entries => {
-  for (const entry of entries) {
-    if (!entry.isIntersecting) continue;
-    navItems.forEach(item => {
-      item.classList.toggle('active', item.dataset.target === entry.target.id);
-    });
-  }
-}, { rootMargin: '-45% 0px -50% 0px' });
-
-sections.forEach(section => spy.observe(section));
+HaboobShell.initDrawer();
+HaboobShell.initContractCopy();
+HaboobShell.initScrollSpy('.nav-item[data-target]');
 
 /* ------------------------------------------------------------------
    BOOT

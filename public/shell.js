@@ -1,0 +1,110 @@
+// shell.js
+// The bits every Haboob page shares: the mobile drawer, the copy-address
+// button, and the scrollspy that lights up whichever nav item matches the
+// section you're looking at.
+//
+// Loaded before each page's own script, which then calls these. Plain script,
+// not a module, so the pages still work when opened straight off disk.
+
+window.HaboobShell = (function () {
+  // Paste the real contract address here once it exists. One place, both pages.
+  const CONTRACT_ADDRESS = "";
+
+  function initDrawer() {
+    const sidebar = document.getElementById("sidebar");
+    const backdrop = document.getElementById("backdrop");
+    const menuOpen = document.getElementById("menuOpen");
+    const menuClose = document.getElementById("menuClose");
+    if (!sidebar || !backdrop || !menuOpen || !menuClose) return;
+
+    function setDrawer(open) {
+      sidebar.classList.toggle("open", open);
+      backdrop.classList.toggle("open", open);
+      menuOpen.setAttribute("aria-expanded", String(open));
+      menuClose.style.display = open ? "inline-flex" : "none";
+    }
+
+    menuOpen.addEventListener("click", () => setDrawer(true));
+    menuClose.addEventListener("click", () => setDrawer(false));
+    backdrop.addEventListener("click", () => setDrawer(false));
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") setDrawer(false);
+    });
+
+    // Tapping any sidebar link on mobile should close the drawer behind you.
+    document.querySelectorAll(".sidebar a, .sidebar .nav-item").forEach((item) => {
+      item.addEventListener("click", () => setDrawer(false));
+    });
+  }
+
+  function initContractCopy() {
+    const btn = document.getElementById("caBtn");
+    const value = document.getElementById("caValue");
+    if (!btn || !value) return;
+
+    if (CONTRACT_ADDRESS) {
+      value.textContent =
+        CONTRACT_ADDRESS.slice(0, 4) + "…" + CONTRACT_ADDRESS.slice(-4);
+    }
+
+    function flash(message) {
+      const original = value.textContent;
+      value.textContent = message;
+      value.classList.add("copied");
+      setTimeout(() => {
+        value.textContent = original;
+        value.classList.remove("copied");
+      }, 1400);
+    }
+
+    btn.addEventListener("click", async () => {
+      if (!CONTRACT_ADDRESS) {
+        flash("Not live yet");
+        return;
+      }
+      try {
+        if (navigator.clipboard) {
+          await navigator.clipboard.writeText(CONTRACT_ADDRESS);
+        } else {
+          // http:// origins and older browsers have no async clipboard.
+          const tmp = document.createElement("textarea");
+          tmp.value = CONTRACT_ADDRESS;
+          document.body.appendChild(tmp);
+          tmp.select();
+          document.execCommand("copy");
+          tmp.remove();
+        }
+        flash("Copied!");
+      } catch {
+        flash("Copy failed");
+      }
+    });
+  }
+
+  // Light up whichever nav item points at the section currently in view.
+  // `selector` picks the item set, so the dashboard can drive its sidebar and
+  // the docs page its table of contents with the same code.
+  function initScrollSpy(selector) {
+    const items = [...document.querySelectorAll(selector)];
+    const sections = items
+      .map((item) => document.getElementById(item.dataset.target))
+      .filter(Boolean);
+    if (!sections.length) return;
+
+    const spy = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
+          items.forEach((item) => {
+            item.classList.toggle("active", item.dataset.target === entry.target.id);
+          });
+        }
+      },
+      { rootMargin: "-45% 0px -50% 0px" }
+    );
+
+    sections.forEach((section) => spy.observe(section));
+  }
+
+  return { CONTRACT_ADDRESS, initDrawer, initContractCopy, initScrollSpy };
+})();

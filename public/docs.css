@@ -1,0 +1,266 @@
+/* docs.css
+   Docs-page layout only. The shell (sidebar, topbar, dune, colour tokens)
+   comes from styles.css, which must be loaded first. */
+
+.docs-wrap{max-width:1240px;padding:0 40px;}
+.docs-top{padding:64px 0 8px;max-width:60ch;}
+.docs-top h1{
+  font-family:var(--font-display);
+  font-size:clamp(30px,4vw,44px);
+  line-height:1.12;
+  margin-bottom:16px;
+  text-shadow:3px 3px 0 rgba(0,0,0,0.35);
+}
+.docs-top p{color:var(--text-muted);font-size:16.5px;}
+
+.docs-layout{
+  display:grid;
+  grid-template-columns:220px 1fr;
+  gap:56px;
+  align-items:start;
+  padding:48px 0 40px;
+}
+
+/* ---------- sticky table of contents ---------- */
+.toc{position:sticky;top:40px;}
+.toc-label{
+  font-size:11px;
+  font-weight:700;
+  letter-spacing:0.14em;
+  text-transform:uppercase;
+  color:var(--text-dim);
+  margin-bottom:12px;
+}
+.toc nav{border-left:1px solid var(--border-soft);}
+.toc-item{
+  position:relative;
+  display:block;
+  width:100%;
+  padding:8px 0 8px 16px;
+  font-family:inherit;
+  font-size:13.5px;
+  font-weight:500;
+  color:var(--text-dim);
+  background:none;
+  border:0;
+  text-align:left;
+  cursor:pointer;
+  transition:color .2s ease;
+}
+.toc-item:hover{color:var(--text-muted);}
+.toc-item.active{color:var(--text);font-weight:700;}
+/* sits on top of the nav's own left rule */
+.toc-item.active::before{
+  content:"";
+  position:absolute;
+  left:-1px;top:0;bottom:0;
+  width:2px;
+  background:var(--sand);
+}
+
+/* ---------- sections ---------- */
+.doc-section + .doc-section{margin-top:72px;}
+.doc-h2{
+  display:flex;
+  align-items:center;
+  gap:18px;
+  margin-bottom:26px;
+}
+.doc-h2 h2{
+  font-family:var(--font-display);
+  font-size:clamp(19px,2.2vw,24px);
+  white-space:nowrap;
+}
+.doc-h2 .rule{height:1px;flex:1;background:var(--border-soft);}
+
+.doc-section p{color:var(--text-muted);margin-bottom:16px;max-width:66ch;}
+.doc-section p.lead{font-size:16px;color:var(--text-muted);}
+.doc-section h3{
+  font-family:var(--font-display);
+  font-size:16px;
+  margin:36px 0 16px;
+  color:var(--text);
+}
+.doc-section h3:first-child{margin-top:0;}
+.doc-section a.inline{color:var(--sand);text-decoration:underline;text-underline-offset:2px;}
+
+code{
+  font-family:var(--font-mono);
+  font-size:0.9em;
+  background:rgba(251,241,226,0.07);
+  border:1px solid var(--border-soft);
+  border-radius:4px;
+  padding:1px 6px;
+  color:var(--cream);
+}
+
+/* ---------- top stat row ---------- */
+.stat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin:26px 0 8px;}
+.stat-card{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:13px;
+  padding:20px 22px;
+}
+.stat-key{
+  font-size:10px;
+  font-weight:700;
+  letter-spacing:0.2em;
+  text-transform:uppercase;
+  color:var(--text-dim);
+  margin-bottom:10px;
+}
+.stat-val{display:flex;align-items:flex-end;gap:10px;}
+.stat-val strong{
+  font-family:var(--font-display);
+  font-size:32px;
+  line-height:1;
+  color:var(--text);
+}
+.badge{
+  font-family:var(--font-mono);
+  font-size:9.5px;
+  letter-spacing:0.06em;
+  color:var(--ink);
+  background:var(--sand);
+  border-radius:4px;
+  padding:2px 7px;
+  margin-bottom:4px;
+}
+.check{display:flex;align-items:center;gap:10px;color:var(--text-muted);font-size:13.5px;}
+.check + .check{margin-top:9px;}
+.check svg{width:17px;height:17px;flex-shrink:0;color:var(--sand);}
+
+/* ---------- icon cards (one per signal) ---------- */
+.icon-cards{display:grid;gap:12px;}
+.icon-card{
+  display:flex;
+  align-items:flex-start;
+  gap:18px;
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:20px 22px;
+  transition:border-color .25s ease,background .25s ease;
+}
+.icon-card:hover{border-color:rgba(217,160,102,0.34);background:var(--card-hover);}
+.icon-box{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  width:42px;height:42px;
+  flex-shrink:0;
+  border-radius:10px;
+  background:rgba(251,241,226,0.07);
+  color:var(--sand);
+  transition:background .25s ease,color .25s ease;
+}
+.icon-card:hover .icon-box{background:var(--sand);color:var(--ink);}
+.icon-box svg{width:19px;height:19px;}
+.icon-card h4{font-size:14.5px;font-weight:700;color:var(--text);margin-bottom:5px;}
+.icon-card h4 .w{
+  font-family:var(--font-mono);
+  font-size:11px;
+  font-weight:400;
+  color:var(--text-dim);
+  margin-left:8px;
+}
+.icon-card p{font-size:13.5px;color:var(--text-muted);margin:0;max-width:none;}
+
+/* ---------- feature groups (bullet lists) ---------- */
+.fgroup{border-top:1px solid var(--border-soft);padding-top:26px;margin-top:26px;}
+.fgroup:first-child{border-top:0;padding-top:0;margin-top:0;}
+.fgroup h3{margin:0 0 14px;}
+.flist{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px 24px;}
+.flist div{display:flex;align-items:flex-start;gap:11px;font-size:13.5px;color:var(--text-muted);}
+.flist .dot-sm{
+  width:5px;height:5px;
+  border-radius:50%;
+  background:var(--sand);
+  flex-shrink:0;
+  margin-top:7px;
+}
+
+/* ---------- numbered steps ---------- */
+.steps{position:relative;border-left:1px solid var(--border);margin-left:5px;padding:4px 0;}
+.step{position:relative;padding-left:28px;}
+.step + .step{margin-top:34px;}
+.step::before{
+  content:"";
+  position:absolute;
+  left:-5px;top:6px;
+  width:9px;height:9px;
+  border-radius:50%;
+  background:var(--bg);
+  border:2px solid var(--sand);
+}
+.step-n{
+  display:block;
+  font-family:var(--font-mono);
+  font-size:10px;
+  letter-spacing:0.14em;
+  color:var(--text-dim);
+  margin-bottom:5px;
+}
+.step h4{font-size:14.5px;font-weight:700;color:var(--text);margin-bottom:6px;}
+.step p{font-size:13.5px;margin-bottom:10px;}
+.step pre{
+  font-family:var(--font-mono);
+  font-size:12.5px;
+  color:var(--cream);
+  background:rgba(10,7,4,0.5);
+  border:1px solid var(--border-soft);
+  border-radius:8px;
+  padding:12px 14px;
+  overflow-x:auto;
+}
+
+/* ---------- callout ---------- */
+.note{
+  display:flex;
+  gap:14px;
+  background:rgba(255,224,26,0.05);
+  border:1px solid rgba(255,224,26,0.22);
+  border-radius:12px;
+  padding:16px 18px;
+  margin:20px 0;
+}
+.note svg{width:18px;height:18px;flex-shrink:0;color:var(--yellow);margin-top:2px;}
+.note p{margin:0;font-size:13.5px;color:var(--text-muted);}
+.note strong{color:var(--text);}
+
+/* ---------- definition table ---------- */
+.dtable{width:100%;border-collapse:collapse;font-size:13.5px;margin-top:4px;}
+.dtable th{
+  text-align:left;
+  font-size:10.5px;
+  letter-spacing:0.12em;
+  text-transform:uppercase;
+  color:var(--text-dim);
+  font-weight:700;
+  padding:0 16px 10px 0;
+  border-bottom:1px solid var(--border-soft);
+}
+.dtable td{padding:13px 16px 13px 0;border-bottom:1px solid var(--border-soft);color:var(--text-muted);vertical-align:top;}
+.dtable td:first-child{white-space:nowrap;}
+.dtable .cond{font-family:var(--font-display);font-size:13px;white-space:nowrap;}
+.dtable .range{font-family:var(--font-mono);color:var(--text-dim);}
+
+.docs-foot{
+  border-top:1px solid var(--border-soft);
+  padding:24px 0 8px;
+  color:var(--text-dim);
+  font-size:12.5px;
+}
+
+@media (max-width:1000px){
+  .docs-layout{grid-template-columns:1fr;gap:0;}
+  .toc{display:none;}
+}
+@media (max-width:900px){
+  .docs-wrap{padding:0 22px;}
+  .docs-top{padding-top:40px;}
+}
+@media (max-width:520px){
+  .icon-card{flex-direction:column;gap:12px;}
+}
