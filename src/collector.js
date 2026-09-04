@@ -398,10 +398,12 @@ async function collectTokenCounts() {
 
 // 2. How much total volume traded?
 async function collectVolume() {
-  const { trades, scale } = await getWindowTransactions();
+  const { trades, scale, spanSeconds } = await getWindowTransactions();
   const totalSol = trades.reduce((sum, event) => sum + solAmount(event), 0);
-  // Scaled here, using the span actually read - see fetchWindow.
-  return { totalSol: totalSol * scale };
+  // Scaled here, using the span actually read - see fetchWindow. The raw
+  // figure and the span come back too: when a scaled number looks wrong, the
+  // question is always whether the sample under it was thin.
+  return { totalSol: totalSol * scale, observedSol: totalSol, spanSeconds, trades: trades.length };
 }
 
 // A rug can happen well after a token's creation, so we can't judge it from
@@ -606,6 +608,11 @@ export async function collect({ mock = false } = {}) {
     avgPriceSwingPercent: volatility.avgSwingPercent,
     source: "live",
     sampleSeconds: config.sampleSeconds,
+    // What the run actually saw, before scaling. Kept so a suspicious number
+    // can be traced back to the size of the sample behind it.
+    observedSpanSeconds: volume.spanSeconds,
+    observedTrades: volume.trades,
+    observedVolumeSol: Number(volume.observedSol.toFixed(2)),
   };
 }
 

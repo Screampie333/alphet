@@ -52,8 +52,9 @@ async function tick() {
       const warn = share > 85 ? " - too close, raise INTERVAL_MINUTES or lower SAMPLE_SECONDS" : "";
 
       console.log(
-        `  cost: ${used} call(s) this run -> ~${perDay.toLocaleString()}/day, ` +
-          `${share}% of the free tier${warn}\n`
+        `  cost: ${used} call(s) this run ` +
+          `(${apiCalls.rpc} paging, ${apiCalls.parse} parse, ${windowCalls.count} window) ` +
+          `-> ~${perDay.toLocaleString()}/day, ${share}% of the free tier${warn}\n`
       );
 
       apiCalls.rpc = 0;
