@@ -92,9 +92,17 @@ function mockRaw() {
 // Run once with DEBUG_COLLECTOR=1 to print a real sample event, and adjust
 // the matching in classify() below if the counts look off.
 
-const WINDOW_MS = config.intervalMinutes * 60 * 1000;
+// We read only the most recent `sampleSeconds` of each interval, not the whole
+// thing - see the note on config.sampleSeconds for why. SAMPLE_SCALE converts
+// the sample's rate-like numbers back up to full-window figures.
+const SAMPLE_MS = config.sampleSeconds * 1000;
+const SAMPLE_SCALE = (config.intervalMinutes * 60) / config.sampleSeconds;
 const LAMPORTS_PER_SOL = 1_000_000_000;
 const HELIUS_PARSE_URL = `https://api.helius.xyz/v0/transactions/?api-key=${config.heliusApiKey}`;
+
+// Roughly 10x the signatures a default 120s sample needs. Purely a runaway
+// guard - see collectSignaturesSince.
+const MAX_SIGNATURES_PER_RUN = 60000;
 
 let windowPromise = null;
 
@@ -106,16 +114,24 @@ function getWindowTransactions() {
 }
 
 async function fetchWindow() {
-  const cutoffSeconds = Math.floor((Date.now() - WINDOW_MS) / 1000);
+  const cutoffSeconds = Math.floor((Date.now() - SAMPLE_MS) / 1000);
   const signatures = await collectSignaturesSince(cutoffSeconds);
   const events = await parseSignatures(signatures);
+  const buckets = classify(events);
 
   if (process.env.DEBUG_COLLECTOR === "1") {
-    console.log(`\n[debug] ${events.length} pump.fun transaction(s) in this window`);
+    console.log(`\n[debug] sampled ${config.sampleSeconds}s (scale x${SAMPLE_SCALE.toFixed(1)})`);
+    console.log(`[debug] ${signatures.length} signature(s) -> ${events.length} parsed event(s)`);
+    console.log(
+      `[debug] kept: ${buckets.creates.length} create / ` +
+        `${buckets.graduations.length} graduation / ${buckets.trades.length} trade`
+    );
+    console.log(`[debug] dropped: ${buckets.dropped.notPumpFun} not-pump.fun, ` +
+      `${buckets.dropped.failed} failed tx, ${buckets.dropped.notATrade} not-a-trade`);
     console.log("[debug] sample event:", JSON.stringify(events[0], null, 2));
   }
 
-  return classify(events);
+  return buckets;
 }
 
 // Page backwards through the pump.fun program's recent signatures until we
@@ -140,8 +156,19 @@ async function collectSignaturesSince(cutoffSeconds) {
       signatures.push(item.signature);
     }
 
-    if (reachedCutoff || signatures.length > 20000) break; // safety valve
+    // The time cutoff above is what normally stops this loop. This cap only
+    // catches a runaway (a bad clock, a sudden traffic spike) so one run can
+    // never eat the whole month's quota.
+    if (reachedCutoff || signatures.length > MAX_SIGNATURES_PER_RUN) break;
     before = batch[batch.length - 1].signature;
+  }
+
+  if (signatures.length > MAX_SIGNATURES_PER_RUN) {
+    console.warn(
+      `  warning: hit the ${MAX_SIGNATURES_PER_RUN}-signature cap before covering ` +
+        `${config.sampleSeconds}s. This run's numbers cover less time than usual - ` +
+        `lower SAMPLE_SECONDS so runs stay comparable.`
+    );
   }
 
   return signatures;
@@ -175,9 +202,21 @@ function classify(events) {
   const creates = [];
   const graduations = [];
   const trades = [];
+  const dropped = { notPumpFun: 0, failed: 0, notATrade: 0 };
 
   for (const event of events) {
-    if (event.source !== "PUMP_FUN") continue; // not a pump.fun transaction
+    if (event.source !== "PUMP_FUN") {
+      dropped.notPumpFun++;
+      continue; // not a pump.fun transaction
+    }
+
+    // Roughly a fifth of pump.fun transactions fail (slippage, sold-out
+    // curves). They still carry the priority fee the sender paid, so counting
+    // them would book failed attempts as trading volume.
+    if (event.transactionError) {
+      dropped.failed++;
+      continue;
+    }
 
     const type = (event.type || "").toUpperCase();
     const description = (event.description || "").toLowerCase();
@@ -191,12 +230,20 @@ function classify(events) {
       description.includes("migrat")
     ) {
       graduations.push(event);
-    } else {
+    } else if (type === "SWAP") {
       trades.push(event); // buys and sells on the bonding curve
+    } else {
+      // Everything else that touches pump.fun but isn't a trade: plain token
+      // transfers between wallets, account closures, and whatever Helius
+      // couldn't label. These must not reach the trade bucket - a wallet-to-
+      // wallet transfer moves tokens while only the gas fee moves SOL, so
+      // treating it as a trade prices the token at fee/tokens and reports a
+      // swing of several thousand percent that never happened.
+      dropped.notATrade++;
     }
   }
 
-  return { creates, graduations, trades };
+  return { creates, graduations, trades, dropped };
 }
 
 // --- small helpers shared by the collect* functions below ---
@@ -410,14 +457,19 @@ export async function collect({ mock = false } = {}) {
     collectVolatility(),
   ]);
 
+  // Counts and volume are rates, so they scale from the sample up to the full
+  // interval. The other two don't: avgPriceSwingPercent is a median ratio, and
+  // the rug numbers come off a watchlist that persists across runs - both
+  // already describe the whole population, not a per-minute count.
   return {
-    tokensCreated: counts.created,
-    tokensGraduated: counts.graduated,
-    totalVolumeSol: volume.totalSol,
+    tokensCreated: Math.round(counts.created * SAMPLE_SCALE),
+    tokensGraduated: Math.round(counts.graduated * SAMPLE_SCALE),
+    totalVolumeSol: Number((volume.totalSol * SAMPLE_SCALE).toFixed(2)),
     tokensRugged: rugs.count,
     activeTokens: rugs.activeTokens,
     avgPriceSwingPercent: volatility.avgSwingPercent,
     source: "live",
+    sampleSeconds: config.sampleSeconds,
   };
 }
 

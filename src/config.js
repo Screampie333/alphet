@@ -37,6 +37,23 @@ export const config = {
   // Every 30 min = 48 pulls/day. Stay generous here to protect your free quota.
   intervalMinutes: Number(process.env.INTERVAL_MINUTES || 30),
 
+  // The pump.fun program is far too busy to read a whole interval. Measured
+  // 2026-09-04: between 50 and 195 signatures per SECOND, so a 30-minute
+  // window runs to 90,000-350,000 transactions, and Helius parses only 100
+  // per call. So we read a short slice of each interval instead and scale the
+  // rate-like numbers back up to the full window.
+  //
+  // Budget per run, at the higher end of that measured range:
+  //   parse calls ~= sampleSeconds * 195 / 100
+  // So 120s is ~230 parse calls per run, ~11,000/day at a 30-minute interval.
+  // Check your actual credit burn on the Helius dashboard after a day and
+  // tune this down if it's eating the free tier.
+  //
+  // Keep it CONSTANT once you start collecting history: every score is
+  // relative to your own past runs, so a sample size that moves around makes
+  // old snapshots incomparable.
+  sampleSeconds: Number(process.env.SAMPLE_SECONDS || 120),
+
   // The pump.fun program on Solana.
   // VERIFY THIS before trusting real data - program IDs can change or be wrong.
   pumpFunProgramId:
