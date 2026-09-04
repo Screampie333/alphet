@@ -397,36 +397,27 @@ async function collectTokenCounts() {
 }
 
 // 2. How much total volume traded?
-// Trade sizes are heavy-tailed enough that a handful of them decide the
-// total. Measured on live traffic: the top 5% of trades carried 25.3% of
-// volume, and a single 3.55 SOL trade was 9.7% of the whole sample. So
-// whether one whale happens to land inside a 19-second window moves the
-// figure by a tenth, and catching two or three moved it 2.3x - which is what
-// pushed the volume score to 100 on a market that had not doubled.
+// Volume over the window, scaled by the span actually read (see fetchWindow).
 //
-// Each trade is capped at the 95th percentile of its own sample before
-// summing. That understates absolute volume by around a fifth, but it
-// understates it *consistently*, and the score is a ratio against Haboob's
-// own baseline - a steady bias divides out of a ratio, where variance does
-// not. The uncapped figure is kept alongside it for display and for checking
-// this decision later.
-const VOLUME_CAP_PERCENTILE = 0.95;
-
+// An earlier version capped each trade at the 95th percentile of its sample.
+// The theory was that the heavy tail drove the swinging score, and the tail
+// is real: the top 5% of trades carry ~25% of volume, and one 3.55 SOL trade
+// was 9.7% of a sample. Measured across five runs it changed nothing - 2.54x
+// spread capped against 2.55x uncapped - while understating volume by 15%, so
+// it is gone.
+//
+// What that measurement did settle is that the reading is sound. Taken as a
+// rate, three consecutive runs agreed within 2.8% (10.37, 10.24, 10.53
+// SOL/s); the wider spread across the day was the market itself climbing from
+// 4.14 SOL/s. A score that swings on a precise reading is a thin baseline,
+// not a noisy collector - and baselines are fixed by time, not by code.
 async function collectVolume() {
   const { trades, scale, spanSeconds } = await getWindowTransactions();
+  const totalSol = trades.reduce((sum, event) => sum + solAmount(event), 0);
 
-  const sizes = trades.map((event) => solAmount(event));
-  const observedSol = sizes.reduce((sum, s) => sum + s, 0);
-
-  const sorted = [...sizes].sort((a, b) => a - b);
-  const cap = sorted.length ? percentile(sorted, VOLUME_CAP_PERCENTILE) : Infinity;
-  const cappedSol = sizes.reduce((sum, s) => sum + Math.min(s, cap), 0);
-
-  // Scaled by the span actually read - see fetchWindow.
   return {
-    totalSol: cappedSol * scale,
-    observedSol,
-    uncappedTotalSol: observedSol * scale,
+    totalSol: totalSol * scale,
+    observedSol: totalSol,
     spanSeconds,
     trades: trades.length,
   };
@@ -639,9 +630,6 @@ export async function collect({ mock = false } = {}) {
     observedSpanSeconds: volume.spanSeconds,
     observedTrades: volume.trades,
     observedVolumeSol: Number(volume.observedSol.toFixed(2)),
-    // Volume before the 95th-percentile cap, so the effect of that decision
-    // stays visible rather than being folded silently into one number.
-    uncappedVolumeSol: Number(volume.uncappedTotalSol.toFixed(2)),
   };
 }
 
