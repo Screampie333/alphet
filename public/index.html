@@ -9,6 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="weather.css">
 </head>
 <body>
 
@@ -115,32 +116,23 @@
      ============================================================ -->
 <main class="main" id="top">
 
-  <!-- hero + live report -->
+  <!-- ============================================================
+       THE REPORT  — laid out like a phone forecast: right-now
+       reading, half-hourly strip, then daily range rows.
+       ============================================================ -->
   <section class="hero" id="report">
     <div class="page">
       <span class="eyebrow">pump.fun weather</span>
       <h1>Check the market weather<br>before you <span class="hl">ape in.</span></h1>
       <p class="lede">Haboob reads pump.fun's on-chain data every 30 minutes — graduation rate, volume, rug rate, volatility — and folds it into one number you can read in five seconds.</p>
 
-      <div class="report">
-        <div>
-          <div class="report-head">
-            <div>
-              <div class="kicker" id="panelLabel">Current condition · demo</div>
-              <div class="cond-name" id="condName">Cloudy</div>
-            </div>
-            <div class="score-wrap">
-              <div class="kicker">Weather index</div>
-              <div class="score" id="scoreNum">54</div>
-            </div>
-          </div>
-          <p class="cond-desc" id="condDesc">Normal volume, no clear trend either way. Time to wait, not to rush in.</p>
-          <div class="chips" id="chips"></div>
-        </div>
+      <!-- right now -->
+      <div class="wx-now">
+        <div class="wx-loc" id="wxLoc">pump.fun</div>
 
-        <div class="mascot">
+        <div class="mascot wx-mascot">
           <div class="mascot-glow" id="mascotGlow"></div>
-          <svg viewBox="0 0 400 400" width="230" height="230" role="img" aria-label="Haboob mascot">
+          <svg viewBox="0 0 400 400" width="164" height="164" role="img" aria-label="Haboob mascot">
             <g stroke-width="4" fill="none" opacity="0.8">
               <path d="M330 160 Q365 135 358 95" stroke="#3ba9f5" stroke-linecap="round" stroke-dasharray="1 9"/>
               <path d="M70 170 Q35 148 44 108" stroke="#ff2fb9" stroke-linecap="round" stroke-dasharray="1 9"/>
@@ -167,18 +159,56 @@
             <path d="M270 280 Q278 300 272 316" fill="none" stroke="#3ba9f5" stroke-width="9" stroke-linecap="round"/>
           </svg>
         </div>
+
+        <div class="wx-index" id="wxIndex">54</div>
+        <div class="wx-cond" id="wxCond">Cloudy ⛅</div>
+        <p class="wx-summary" id="wxSummary">Normal volume, no clear trend either way.</p>
+        <div class="wx-hl" id="wxHL"></div>
+        <div class="wx-chips chips" id="wxChips"></div>
       </div>
+
+      <div class="wx-grid">
+        <!-- half-hourly strip -->
+        <div class="wx-card">
+          <div class="wx-card-head">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+            <span>Half-hourly readings</span>
+            <span class="right" id="wxHoursMeta"></span>
+          </div>
+          <div class="wx-hours" id="wxHours"></div>
+        </div>
+
+        <!-- daily range rows -->
+        <div class="wx-card">
+          <div class="wx-card-head">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="M8 2v4"/><path d="M16 2v4"/></svg>
+            <span>Daily range</span>
+            <span class="right" id="wxDaysMeta"></span>
+          </div>
+          <div id="wxDays"></div>
+        </div>
+      </div>
+
+      <p class="wx-note" id="wxNote"></p>
     </div>
   </section>
 
-  <!-- four signals -->
+  <!-- detail tiles -->
   <section class="block" id="signals">
     <div class="page">
       <h2 class="section-title">Four things Haboob reads</h2>
       <p class="section-sub">The index isn't a mood. It's four on-chain signals, each scored 0–100 against your own recent history, then weighted into one number.</p>
-      <div class="grid" id="signalGrid"></div>
 
-      <dl class="readout" id="readout"></dl>
+      <div class="wx-tiles" id="wxTiles"></div>
+
+      <div class="wx-card" style="margin-top:12px;">
+        <div class="wx-card-head">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+          <span>Raw readings</span>
+          <span class="right">this window</span>
+        </div>
+        <dl class="wx-raw" id="wxRaw"></dl>
+      </div>
     </div>
   </section>
 
@@ -187,7 +217,33 @@
     <div class="page">
       <h2 class="section-title">Reading the index</h2>
       <p class="section-sub">Five conditions, four thresholds. Extreme ignores the index entirely — when swings get wild enough, the average stops meaning anything and you just need the warning.</p>
-      <div class="scale" id="scaleGrid"></div>
+      <div class="scale">
+        <div class="scale-item" style="border-left-color:#ffe01a;">
+          <div class="scale-range">70 – 100</div>
+          <div class="scale-name" style="color:#ffe01a;">Sunny ☀️</div>
+          <div class="scale-note">Graduations up, volume up, rugs quiet.</div>
+        </div>
+        <div class="scale-item" style="border-left-color:#d9a066;">
+          <div class="scale-range">45 – 69</div>
+          <div class="scale-name" style="color:#d9a066;">Cloudy ⛅</div>
+          <div class="scale-note">Ordinary day. No edge either direction.</div>
+        </div>
+        <div class="scale-item" style="border-left-color:#3ba9f5;">
+          <div class="scale-range">25 – 44</div>
+          <div class="scale-name" style="color:#3ba9f5;">Overcast 🌧️</div>
+          <div class="scale-note">Volume fading, bonding curves stalling.</div>
+        </div>
+        <div class="scale-item" style="border-left-color:#ff2fb9;">
+          <div class="scale-range">0 – 24</div>
+          <div class="scale-name" style="color:#ff2fb9;">Storm ⛈️</div>
+          <div class="scale-note">Rugs above normal, tokens falling together.</div>
+        </div>
+        <div class="scale-item" style="border-left-color:#c97a3e;">
+          <div class="scale-range">override</div>
+          <div class="scale-name" style="color:#c97a3e;">Extreme 🌪️</div>
+          <div class="scale-note">Volatility so high the index stops mattering.</div>
+        </div>
+      </div>
     </div>
   </section>
 

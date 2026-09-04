@@ -13,7 +13,7 @@ import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
 import { config, ROOT } from "./config.js";
-import { latest } from "./storage.js";
+import { latest, recent } from "./storage.js";
 
 const PUBLIC_DIR = path.join(ROOT, "public");
 
@@ -34,6 +34,20 @@ function serveLatestSnapshot(res) {
   const snapshot = latest();
   res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
   res.end(JSON.stringify({ snapshot }));
+}
+
+// The weather view needs a series, not just the newest reading - the
+// half-hourly strip and the daily rows are both drawn from this.
+function serveHistory(res, requestUrl) {
+  const params = new URL(requestUrl, "http://localhost").searchParams;
+  const days = Math.min(Math.max(Number(params.get("days")) || 7, 1), 30);
+
+  // Cap the payload: at 48 snapshots/day, a month of history is a lot of JSON
+  // to push at a page that only draws the tail of it.
+  const snapshots = recent(days).slice(-400);
+
+  res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+  res.end(JSON.stringify({ snapshots }));
 }
 
 function serveStatic(req, res) {
@@ -62,8 +76,15 @@ function serveStatic(req, res) {
 }
 
 const server = http.createServer((req, res) => {
-  if (req.method === "GET" && req.url.split("?")[0] === "/api/latest") {
+  const route = req.url.split("?")[0];
+
+  if (req.method === "GET" && route === "/api/latest") {
     serveLatestSnapshot(res);
+    return;
+  }
+
+  if (req.method === "GET" && route === "/api/history") {
+    serveHistory(res, req.url);
     return;
   }
   serveStatic(req, res);

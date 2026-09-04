@@ -305,131 +305,8 @@ h1 .hl{color:var(--sand);}
 }
 .section-sub{color:var(--text-muted);max-width:60ch;margin-bottom:28px;font-size:14.5px;}
 
-/* ---------- report card ---------- */
-.report{
-  display:grid;
-  grid-template-columns:1fr 250px;
-  gap:32px;
-  align-items:center;
-  background:var(--card);
-  border:1px solid var(--border);
-  border-radius:16px;
-  padding:28px 30px;
-  margin-top:34px;
-  position:relative;
-  overflow:hidden;
-}
-.report::after{
-  content:"";
-  position:absolute;
-  inset:0;
-  border-radius:16px;
-  pointer-events:none;
-  box-shadow:inset 0 0 90px -45px var(--accent);
-  transition:box-shadow .4s ease;
-}
-.report-head{
-  display:flex;
-  align-items:baseline;
-  justify-content:space-between;
-  gap:16px;
-  flex-wrap:wrap;
-  margin-bottom:14px;
-}
-.kicker{
-  font-size:11.5px;
-  letter-spacing:0.1em;
-  text-transform:uppercase;
-  color:var(--text-dim);
-  font-weight:600;
-  margin-bottom:4px;
-}
-.cond-name{
-  font-family:var(--font-display);
-  font-size:30px;
-  line-height:1.2;
-  color:var(--accent);
-  transition:color .35s ease;
-}
-.score-wrap{text-align:right;}
-.score{
-  font-family:var(--font-display);
-  font-size:52px;
-  line-height:1;
-  color:var(--accent);
-  transition:color .35s ease;
-}
-.cond-desc{color:var(--text-muted);font-size:14.5px;margin-bottom:20px;max-width:52ch;}
-
-.chips{display:flex;gap:8px;flex-wrap:wrap;}
-.chip{
-  font-family:var(--font-body);
-  font-size:12.5px;
-  font-weight:500;
-  padding:7px 14px;
-  border-radius:20px;
-  border:1px solid var(--border);
-  background:transparent;
-  color:var(--text-muted);
-  cursor:pointer;
-  transition:all .15s ease;
-}
-.chip:hover{border-color:var(--sand);color:var(--text);}
-.chip.active{background:var(--sand);border-color:var(--sand);color:var(--ink);font-weight:700;}
-
-.mascot{position:relative;display:flex;align-items:center;justify-content:center;}
-.mascot-glow{
-  position:absolute;
-  width:200px;height:200px;
-  border-radius:50%;
-  background:var(--accent);
-  opacity:0.26;
-  filter:blur(3px);
-  transition:background .4s ease;
-}
-.mascot svg{position:relative;height:auto;}
-
-/* ---------- signal cards ---------- */
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(216px,1fr));gap:14px;}
-.card{
-  background:var(--card);
-  border:1px solid var(--border);
-  border-radius:13px;
-  padding:20px;
-  transition:background .2s ease,border-color .2s ease;
-}
-.card:hover{background:var(--card-hover);border-color:rgba(217,160,102,0.3);}
-.card-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;}
-.card-name{font-size:13px;color:var(--text-muted);}
-.weight{
-  font-size:10px;
-  font-weight:700;
-  letter-spacing:0.06em;
-  color:var(--text-dim);
-  border:1px solid var(--border);
-  border-radius:20px;
-  padding:2px 8px;
-  white-space:nowrap;
-}
-.card-value{font-family:var(--font-display);font-size:26px;margin-bottom:12px;}
-.track{height:7px;background:rgba(251,241,226,0.1);border-radius:4px;overflow:hidden;}
-.fill{height:100%;border-radius:4px;background:var(--sand);transition:width .45s ease,background .4s ease;}
-.card-note{font-size:12px;color:var(--text-dim);margin-top:10px;}
-
-/* ---------- raw readout ---------- */
-.readout{
-  display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(158px,1fr));
-  gap:1px;
-  background:var(--border-soft);
-  border:1px solid var(--border-soft);
-  border-radius:13px;
-  overflow:hidden;
-  margin-top:14px;
-}
-.readout > div{background:var(--bg-alt);padding:18px 20px;}
-.readout dt{font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-dim);margin-bottom:6px;}
-.readout dd{font-family:var(--font-mono);font-size:19px;color:var(--text);}
+/* The report card, signal cards and raw readout that used to live here
+   moved to weather.css when the report became a forecast-style view. */
 
 /* ---------- scale strip ---------- */
 .scale{display:grid;grid-template-columns:repeat(auto-fit,minmax(178px,1fr));gap:12px;}
@@ -526,7 +403,6 @@ h1 .hl{color:var(--sand);}
    ============================================================ */
 @media (max-width:1080px){
   .report{grid-template-columns:1fr;}
-  .mascot{order:-1;}
   .split{grid-template-columns:1fr;gap:28px;}
 }
 @media (max-width:900px){
