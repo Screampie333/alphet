@@ -5507,5 +5507,119 @@
       "observedVolumeSol": 61.45
     },
     "baselineSnapshots": 146
+  },
+  {
+    "timestamp": "2026-09-05T16:16:01.830Z",
+    "index": 47,
+    "condition": {
+      "key": "cloudy",
+      "label": "Cloudy",
+      "emoji": "⛅",
+      "summary": "Normal volume, no clear trend either way. Nothing here rewards rushing."
+    },
+    "subScores": {
+      "graduation": 51,
+      "volume": 57,
+      "rug": 26,
+      "volatility": 56,
+      "rates": {
+        "graduationRatePercent": 4.58,
+        "rugRatePercent": 0.17,
+        "avgPriceSwingPercent": 92.24,
+        "volumeSol": 1482.62,
+        "pooledSnapshots": 12,
+        "baselineSnapshots": 136
+      }
+    },
+    "raw": {
+      "tokensCreated": 48,
+      "tokensGraduated": 4,
+      "totalVolumeSol": 713.15,
+      "tokensRugged": 0,
+      "activeTokens": 673,
+      "avgPriceSwingPercent": 118.12913566141562,
+      "source": "live",
+      "sampleSeconds": 30,
+      "observedSpanSeconds": 20,
+      "observedTrades": 312,
+      "observedVolumeSol": 47.54
+    },
+    "baselineSnapshots": 147
+  },
+  {
+    "timestamp": "2026-09-05T16:20:55.562Z",
+    "index": 46,
+    "condition": {
+      "key": "cloudy",
+      "label": "Cloudy",
+      "emoji": "⛅",
+      "summary": "Normal volume, no clear trend either way. Nothing here rewards rushing."
+    },
+    "subScores": {
+      "graduation": 54,
+      "volume": 52,
+      "rug": 26,
+      "volatility": 53,
+      "rates": {
+        "graduationRatePercent": 4.83,
+        "rugRatePercent": 0.17,
+        "avgPriceSwingPercent": 98.65,
+        "volumeSol": 1369.13,
+        "pooledSnapshots": 12,
+        "baselineSnapshots": 137
+      }
+    },
+    "raw": {
+      "tokensCreated": 73,
+      "tokensGraduated": 4,
+      "totalVolumeSol": 1207.73,
+      "tokensRugged": 0,
+      "activeTokens": 678,
+      "avgPriceSwingPercent": 134.44098496382964,
+      "source": "live",
+      "sampleSeconds": 30,
+      "observedSpanSeconds": 20,
+      "observedTrades": 464,
+      "observedVolumeSol": 80.52
+    },
+    "baselineSnapshots": 148
+  },
+  {
+    "timestamp": "2026-09-05T16:26:09.501Z",
+    "index": 44,
+    "condition": {
+      "key": "overcast",
+      "label": "Overcast",
+      "emoji": "🌧️",
+      "summary": "Volume is fading and fewer tokens are making it off the bonding curve."
+    },
+    "subScores": {
+      "graduation": 49,
+      "volume": 49,
+      "rug": 27,
+      "volatility": 53,
+      "rates": {
+        "graduationRatePercent": 4.4,
+        "rugRatePercent": 0.16,
+        "avgPriceSwingPercent": 98.03,
+        "volumeSol": 1290.77,
+        "pooledSnapshots": 12,
+        "baselineSnapshots": 138
+      }
+    },
+    "raw": {
+      "tokensCreated": 74,
+      "tokensGraduated": 3,
+      "totalVolumeSol": 926.03,
+      "tokensRugged": 1,
+      "activeTokens": 680,
+      "avgPriceSwingPercent": 72.47670710751221,
+      "source": "live",
+      "sampleSeconds": 30,
+      "observedSpanSeconds": 20,
+      "observedTrades": 442,
+      "observedVolumeSol": 61.74
+    },
+    "baselineSnapshots": 149
   }
 ]
