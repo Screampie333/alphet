@@ -683,6 +683,23 @@ function renderTimeframe() {
       value.appendChild(unit);
     }
 
+    // A total is only as complete as the window behind it. Rates and averages
+    // survive a gap - they describe whatever was collected - but a sum comes
+    // out short, and "138.2K SOL" sitting beside an exact on-chain count of
+    // 25,113 created invites the reader to compare a third of a day with a
+    // whole one. So the shortfall is marked on the number itself, not left to
+    // a footnote under the panel.
+    if (metric.coverageSensitive && win.coveragePercent < 90) {
+      const partial = document.createElement('span');
+      partial.className = 'tf-partial';
+      partial.textContent = `${win.coveragePercent}% of window`;
+      partial.title =
+        `Summed from ${win.readings} of ~${win.expectedReadings} readings, so this ` +
+        `total is short of the real ${win.label} figure. The rates above are ratios ` +
+        `and stay accurate at any coverage.`;
+      value.appendChild(partial);
+    }
+
     const deltaEl = card.querySelector('.tf-delta');
     deltaEl.textContent = delta.text;
     deltaEl.className = 'tf-delta ' + delta.cls;
@@ -711,6 +728,14 @@ function renderTimeframe() {
     cell.innerHTML = '<div class="k"></div><div class="v"><span class="n"></span><span class="tf-delta"></span></div>';
     cell.querySelector('.k').textContent = count.label;
     cell.querySelector('.n').textContent = count.value === null ? '—' : nf.format(count.value);
+
+    if (count.coverageSensitive && win.coveragePercent < 90) {
+      const partial = document.createElement('span');
+      partial.className = 'tf-partial';
+      partial.textContent = `${win.coveragePercent}%`;
+      partial.title = `Summed from ${win.readings} of ~${win.expectedReadings} readings, so this count is short of the real ${win.label} figure.`;
+      cell.querySelector('.v').appendChild(partial);
+    }
 
     const deltaEl = cell.querySelector('.tf-delta');
     deltaEl.textContent = delta.text;

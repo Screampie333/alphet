@@ -526,3 +526,19 @@
 @media (max-width:520px){
   .hd-row{grid-template-columns:46px 18px 1fr 26px;gap:8px;}
 }
+
+/* Marks a total that was summed from a partly-covered window, so it is not
+   read as the full figure beside the exact on-chain counts next to it. */
+.tf-partial{
+  font-family:var(--font-mono);
+  font-size:9.5px;
+  letter-spacing:0.04em;
+  color:var(--text-dim);
+  border:1px solid var(--border);
+  border-radius:4px;
+  padding:2px 5px;
+  margin-left:7px;
+  white-space:nowrap;
+  vertical-align:middle;
+  cursor:help;
+}

@@ -3721,5 +3721,81 @@
       "observedVolumeSol": 63.98
     },
     "baselineSnapshots": 99
+  },
+  {
+    "timestamp": "2026-09-05T12:20:44.835Z",
+    "index": 50,
+    "condition": {
+      "key": "cloudy",
+      "label": "Cloudy",
+      "emoji": "⛅",
+      "summary": "Normal volume, no clear trend either way. Nothing here rewards rushing."
+    },
+    "subScores": {
+      "graduation": 40,
+      "volume": 29,
+      "rug": 89,
+      "volatility": 53,
+      "rates": {
+        "graduationRatePercent": 3.45,
+        "rugRatePercent": 0.04,
+        "avgPriceSwingPercent": 94.22,
+        "volumeSol": 844.51,
+        "pooledSnapshots": 12,
+        "baselineSnapshots": 89
+      }
+    },
+    "raw": {
+      "tokensCreated": 60,
+      "tokensGraduated": 0,
+      "totalVolumeSol": 568.99,
+      "tokensRugged": 0,
+      "activeTokens": 492,
+      "avgPriceSwingPercent": 17.501376332133795,
+      "source": "live",
+      "sampleSeconds": 30,
+      "observedSpanSeconds": 20,
+      "observedTrades": 236,
+      "observedVolumeSol": 37.93
+    },
+    "baselineSnapshots": 100
+  },
+  {
+    "timestamp": "2026-09-05T12:25:59.883Z",
+    "index": 50,
+    "condition": {
+      "key": "cloudy",
+      "label": "Cloudy",
+      "emoji": "⛅",
+      "summary": "Normal volume, no clear trend either way. Nothing here rewards rushing."
+    },
+    "subScores": {
+      "graduation": 41,
+      "volume": 28,
+      "rug": 89,
+      "volatility": 51,
+      "rates": {
+        "graduationRatePercent": 3.51,
+        "rugRatePercent": 0.04,
+        "avgPriceSwingPercent": 98.01,
+        "volumeSol": 815.72,
+        "pooledSnapshots": 12,
+        "baselineSnapshots": 90
+      }
+    },
+    "raw": {
+      "tokensCreated": 51,
+      "tokensGraduated": 3,
+      "totalVolumeSol": 864.53,
+      "tokensRugged": 0,
+      "activeTokens": 493,
+      "avgPriceSwingPercent": 156.80518077960488,
+      "source": "live",
+      "sampleSeconds": 30,
+      "observedSpanSeconds": 20,
+      "observedTrades": 306,
+      "observedVolumeSol": 57.64
+    },
+    "baselineSnapshots": 101
   }
 ]

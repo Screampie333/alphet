@@ -50,6 +50,10 @@ export const METRICS = [
     decimals: 0,
     upIsGood: true,
     score: "volume",
+    // A sum, so a window missing readings reports less than happened. Rates
+    // and means above are ratios over whatever was collected and stay honest
+    // at any coverage; this one does not.
+    coverageSensitive: true,
     compute: (s) => sum(s, "totalVolumeSol"),
   },
   {
@@ -76,7 +80,9 @@ export const METRICS = [
 export const COUNTS = [
   { key: "tokensCreated", label: "Created", upIsGood: true },
   { key: "tokensGraduated", label: "Graduated", upIsGood: true },
-  { key: "tokensRugged", label: "Rugged", upIsGood: false },
+  // Also a sum, and unlike created/graduated it has no on-chain source to
+  // fall back on, so it shrinks with coverage too.
+  { key: "tokensRugged", label: "Rugged", upIsGood: false, coverageSensitive: true },
 ];
 
 function sum(snapshots, field) {
@@ -127,6 +133,7 @@ export function rollupWindow(snapshots, windowMs, now = Date.now()) {
       unit: metric.unit,
       decimals: metric.decimals,
       upIsGood: metric.upIsGood,
+      coverageSensitive: Boolean(metric.coverageSensitive),
       value,
       previous: before,
       changePercent: percentChange(value, before),
@@ -145,6 +152,7 @@ export function rollupWindow(snapshots, windowMs, now = Date.now()) {
     counts[count.key] = {
       label: count.label,
       upIsGood: count.upIsGood,
+      coverageSensitive: Boolean(count.coverageSensitive),
       value,
       changePercent: percentChange(value, before),
     };
