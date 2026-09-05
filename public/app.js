@@ -505,19 +505,18 @@ function deltaMarkup(changePercent, upIsGood) {
     ? Math.round(Math.abs(rounded))
     : Math.abs(rounded).toFixed(2);
 
-  // The arrow carries direction and the colour carries whether that direction
-  // is good news, which are not the same thing on a metric where less is
-  // better: a rug rate falling 42% renders as a green down-arrow, and that
-  // pairing reads as a contradiction unless something says so out loud.
+  // Colour follows the direction of the number, the way a candle does: green
+  // is up and red is down on every metric, so the colour and the arrow can
+  // never disagree with each other.
   //
-  // So the metrics where down is the good direction spell it out. The ones
-  // where up is obviously good are left alone rather than captioning every
-  // number into noise.
-  const sense = upIsGood ? '' : ` ${good ? 'better' : 'worse'}`;
-
+  // The cost is that a falling rug rate shows red even though fewer rugs is
+  // good news. Colouring by good-versus-bad instead was tried first and read
+  // as broken - green beside a down arrow looks like a contradiction, and it
+  // was reported as a bug twice. Direction is the convention people arrive
+  // with; the judgement goes in the tooltip, where it cannot fight the colour.
   return {
-    text: `${arrow} ${magnitude}%${sense}`,
-    cls: good ? 'up' : 'down',
+    text: `${arrow} ${magnitude}%`,
+    cls: rising ? 'up' : 'down',
     title: `${rising ? 'Up' : 'Down'} ${magnitude}% vs the previous window — ${good ? 'better' : 'worse'} conditions`
   };
 }
