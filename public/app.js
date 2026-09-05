@@ -121,6 +121,7 @@ const el = {
   loc: document.getElementById('wxLoc'),
   hours: document.getElementById('wxHours'),
   hoursMeta: document.getElementById('wxHoursMeta'),
+  hourDetail: document.getElementById('wxHourDetail'),
   days: document.getElementById('wxDays'),
   daysMeta: document.getElementById('wxDaysMeta'),
   tiles: document.getElementById('wxTiles'),
@@ -196,21 +197,34 @@ function groupByHour(series) {
     // The first reading of the hour stands for it. Keeping a real timestamp
     // rather than a reconstructed one means the formatters do the zone
     // conversion, and DST is theirs to handle rather than ours.
-    if (!hours.has(key)) hours.set(key, { key, start: when, values: [] });
-    hours.get(key).values.push(point.index);
+    if (!hours.has(key)) hours.set(key, { key, start: when, points: [] });
+    hours.get(key).points.push(point);
   }
 
   return [...hours.values()]
     .sort((a, b) => a.start - b.start)
     .map((hour) => {
-      const total = hour.values.reduce((sum, v) => sum + v, 0);
-      const index = Math.round(total / hour.values.length);
-      return { start: hour.start, index, readings: hour.values.length };
+      const values = hour.points.map((p) => p.index);
+      const total = values.reduce((sum, v) => sum + v, 0);
+      return {
+        key: hour.key,
+        start: hour.start,
+        index: Math.round(total / values.length),
+        low: Math.min(...values),
+        high: Math.max(...values),
+        readings: values.length,
+        // The individual snapshots are kept, not just their average: an hour
+        // that averaged 59 having run 40 to 71 is a different hour from one
+        // that sat at 59 throughout, and only the readings can say which.
+        points: hour.points
+      };
     });
 }
 
 // Hourly strip. Every value is directly labelled, so the tooltip only carries
 // what the column has no room for.
+let openHourKey = null;
+
 function renderHours(hours, currentIndex = null) {
   el.hours.innerHTML = '';
 
@@ -222,11 +236,11 @@ function renderHours(hours, currentIndex = null) {
     const shown = isNow && currentIndex !== null ? currentIndex : hour.index;
     const cond = conditionForIndex(shown);
 
-    const col = document.createElement('div');
-    col.className = 'wx-hour' + (isNow ? ' now' : '');
-    col.title =
-      `${fullFmt.format(hour.start)} · ${cond.label} · index ${shown}` +
-      (isNow ? '' : ` · average of ${hour.readings} reading${hour.readings === 1 ? '' : 's'}`);
+    const col = document.createElement('button');
+    col.type = 'button';
+    col.className = 'wx-hour' + (isNow ? ' now' : '') + (hour.key === openHourKey ? ' open' : '');
+    col.setAttribute('aria-expanded', String(hour.key === openHourKey));
+    col.title = `${fullFmt.format(hour.start)} — open this hour`;
     col.innerHTML =
       '<span class="t"></span>' +
       '<span class="ico"></span>' +
@@ -238,11 +252,75 @@ function renderHours(hours, currentIndex = null) {
     col.querySelector('.v').textContent = shown;
     col.querySelector('.pip').style.background = cond.color;
 
+    col.addEventListener('click', () => {
+      openHourKey = openHourKey === hour.key ? null : hour.key;
+      renderHours(hours, currentIndex);
+      renderHourDetail(hours);
+    });
+
     el.hours.appendChild(col);
   });
 
-  // Newest hour sits at the right, which is where the eye should land.
-  el.hours.scrollLeft = el.hours.scrollWidth;
+  // Newest hour sits at the right, which is where the eye should land - but
+  // not while an hour is open, or picking one would scroll it out of view.
+  if (openHourKey === null) el.hours.scrollLeft = el.hours.scrollWidth;
+}
+
+// The readings behind one hour. The strip shows an hour's average; this is
+// what that average is standing on.
+function renderHourDetail(hours) {
+  const hour = hours.find((h) => h.key === openHourKey);
+
+  if (!hour) {
+    el.hourDetail.hidden = true;
+    el.hourDetail.innerHTML = '';
+    return;
+  }
+
+  const cond = conditionForIndex(hour.index);
+  el.hourDetail.hidden = false;
+  el.hourDetail.innerHTML =
+    '<div class="hd-head">' +
+      '<span class="hd-when"></span>' +
+      '<span class="hd-sum"></span>' +
+      '<button type="button" class="hd-close" aria-label="Close">✕</button>' +
+    '</div>' +
+    '<div class="hd-rows"></div>';
+
+  el.hourDetail.querySelector('.hd-when').textContent = fullFmt.format(hour.start);
+  el.hourDetail.querySelector('.hd-sum').textContent =
+    `${cond.emoji} ${cond.label} · avg ${hour.index} · ` +
+    (hour.readings === 1
+      ? '1 reading'
+      : `${hour.readings} readings, ${hour.low}–${hour.high}`);
+
+  el.hourDetail.querySelector('.hd-close').addEventListener('click', () => {
+    openHourKey = null;
+    renderHours(hours);
+    renderHourDetail(hours);
+  });
+
+  const rows = el.hourDetail.querySelector('.hd-rows');
+  for (const point of hour.points) {
+    const c = conditionForIndex(point.index);
+    const row = document.createElement('div');
+    row.className = 'hd-row';
+    row.innerHTML =
+      '<span class="hd-t"></span>' +
+      '<span class="hd-i"></span>' +
+      '<span class="hd-bar"><i></i></span>' +
+      '<span class="hd-v"></span>';
+
+    row.querySelector('.hd-t').textContent = timeFmt.format(new Date(point.timestamp));
+    row.querySelector('.hd-i').textContent = c.emoji;
+    row.querySelector('.hd-v').textContent = point.index;
+
+    const fill = row.querySelector('.hd-bar i');
+    fill.style.width = point.index + '%';
+    fill.style.background = c.color;
+
+    rows.appendChild(row);
+  }
 }
 
 // Group a series into calendar days, keeping each day's low, high and last.
@@ -384,6 +462,7 @@ function showDemo(cond) {
   el.loc.textContent = 'pump.fun';
   renderNow(cond, cond.score, cond.desc, readings);
   renderHours(hourly, cond.score);
+  renderHourDetail(hourly);
   renderDays(daily);
   renderTiles(demoScores[cond.key], demoRaw[cond.key]);
 
@@ -409,6 +488,7 @@ function showLive(snapshot, history) {
   el.loc.textContent = 'pump.fun';
   renderNow(cond, snapshot.index, snapshot.condition.summary, shownReadings);
   renderHours(hourly, snapshot.index);
+  renderHourDetail(hourly);
   renderDays(series);
   renderTiles(snapshot.subScores, snapshot.raw);
 
