@@ -9,7 +9,8 @@
     "once": "node src/run.js --once",
     "mock": "node src/run.js --once --mock",
     "history": "node src/history.js",
-    "web": "node src/server.js"
+    "web": "node src/server.js",
+    "compare": "node src/compare.js"
   },
   "engines": {
     "node": ">=18"

@@ -3,177 +3,466 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Weather background — Haboob</title>
-<meta name="description" content="Preview harness for the animated weather background: every condition, switchable, with the layer stack visible.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bungee&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css">
-<link rel="stylesheet" href="weather-bg.css">
+<title>Haboob — animated weather background</title>
 <style>
-/* Preview chrome only - the background itself is entirely weather-bg.css.
-   This page exists so the sky can be judged on its own, without the report
-   sitting on top of it. */
-body{min-height:100vh;}
-.pv{
-  position:relative;
-  z-index:10;
-  max-width:760px;
-  margin-inline:auto;
-  padding:64px 24px 96px;
-}
-.pv h1{
-  font-family:var(--font-display);
-  font-size:clamp(24px,4vw,36px);
-  margin-bottom:10px;
-  text-shadow:3px 3px 0 rgba(0,0,0,0.35);
-}
-.pv .lede{color:var(--text-muted);margin-bottom:28px;max-width:58ch;}
-.pv-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:28px;}
-.pv-btn{
-  font-family:var(--font-body);
-  font-size:13.5px;
-  font-weight:500;
-  padding:9px 16px;
-  border-radius:20px;
-  border:1px solid var(--border);
-  background:rgba(20,13,8,0.55);
-  color:var(--text-muted);
-  cursor:pointer;
-  backdrop-filter:blur(8px);
-  transition:all .15s ease;
-}
-.pv-btn:hover{border-color:var(--sand);color:var(--text);}
-.pv-btn.active{background:var(--sand);border-color:var(--sand);color:var(--ink);font-weight:700;}
+:root{
+  --ink:#120d09;
+  --text:#fbf1e2;
+  --yellow:#ffe01a;
+  --magenta:#ff2fb9;
+  --blue:#3ba9f5;
+  --sand:#d9a066;
+  --rust:#c97a3e;
+  --font-display:'Bungee','Segoe UI',cursive,sans-serif;
+  --font-body:'Space Grotesk','Segoe UI',system-ui,sans-serif;
 
-.pv-card{
-  background:rgba(20,13,8,0.55);
-  border:1px solid var(--border);
-  border-radius:16px;
-  padding:20px 22px;
-  backdrop-filter:blur(10px);
-  margin-bottom:14px;
+  --sky-top:#3a2416;
+  --sky-bottom:#1c130d;
 }
-.pv-card h2{
-  font-family:var(--font-display);
-  font-size:15px;
-  margin-bottom:12px;
+*{box-sizing:border-box; margin:0; padding:0;}
+html,body{height:100%;}
+body{
+  font-family:var(--font-body);
+  color:var(--text);
+  overflow:hidden;
+  background:var(--ink);
 }
-.pv-layers{display:grid;gap:8px;}
-.pv-layer{
-  display:grid;
-  grid-template-columns:110px 1fr 44px;
+
+/* ============================================================
+   THE ANIMATED BACKGROUND
+   ============================================================ */
+
+#weatherBg{
+  position:fixed;
+  inset:0;
+  z-index:0;
+  overflow:hidden;
+  background:linear-gradient(180deg, var(--sky-top), var(--sky-bottom));
+  transition:background 1.6s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change:background;
+}
+
+/* --- condition -> sky color --- */
+#weatherBg[data-weather="sunny"]{ --sky-top:#f5b756; --sky-bottom:#d9895a; }
+#weatherBg[data-weather="cloudy"]{ --sky-top:#5c4732; --sky-bottom:#2a1c12; }
+#weatherBg[data-weather="overcast"]{ --sky-top:#33404a; --sky-bottom:#1a1712; }
+#weatherBg[data-weather="storm"]{ --sky-top:#241521; --sky-bottom:#120d09; }
+#weatherBg[data-weather="extreme"]{ --sky-top:#4a2010; --sky-bottom:#1c0d10; }
+
+/* --- sun glow (sunny only) --- */
+.sun{
+  position:absolute;
+  top:12%; right:18%;
+  width:220px; height:220px;
+  border-radius:50%;
+  background:radial-gradient(circle, rgba(255,224,26,0.95), rgba(255,224,26,0) 70%);
+  opacity:0;
+  transition:opacity 1.4s cubic-bezier(0.4, 0, 0.2, 1);
+  animation:pulse 6s cubic-bezier(0.4, 0, 0.6, 1) infinite alternate;
+  will-change:transform, opacity;
+}
+#weatherBg[data-weather="sunny"] .sun{ opacity:1; }
+
+@keyframes pulse{
+  0%{ transform:scale(0.96); filter:drop-shadow(0 0 10px rgba(255,224,26,0.2)); }
+  100%{ transform:scale(1.08); filter:drop-shadow(0 0 30px rgba(255,224,26,0.6)); }
+}
+
+/* --- sun rays (sunny only) --- */
+.rays{
+  position:absolute;
+  top:12%; right:18%;
+  width:520px; height:520px;
+  transform:translate3d(35%,-35%,0);
+  opacity:0;
+  transition:opacity 1.4s cubic-bezier(0.4, 0, 0.2, 1);
+  animation:spin 90s linear infinite;
+  will-change:transform, opacity;
+}
+#weatherBg[data-weather="sunny"] .rays{ opacity:0.35; }
+.rays::before{
+  content:"";
+  position:absolute; inset:0;
+  background:repeating-conic-gradient(
+    rgba(255,224,26,0.4) 0deg 4deg,
+    transparent 4deg 18deg
+  );
+  border-radius:50%;
+  mask-image:radial-gradient(circle, rgba(0,0,0,1) 20%, rgba(0,0,0,0) 70%);
+  -webkit-mask-image:radial-gradient(circle, rgba(0,0,0,1) 20%, rgba(0,0,0,0) 70%);
+}
+@keyframes spin{ 
+  to{ transform:translate3d(35%,-35%,0) rotate(360deg); } 
+}
+
+/* --- clouds --- */
+.cloud{
+  position:absolute;
+  background:var(--cloud-color, #caa47a);
+  border-radius:50px;
+  opacity:0;
+  filter:blur(2px);
+  transition:opacity 1.4s cubic-bezier(0.4, 0, 0.2, 1), background 1.4s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change:transform, opacity;
+}
+.cloud::before, .cloud::after{
+  content:"";
+  position:absolute;
+  background:inherit;
+  border-radius:50%;
+}
+
+.c1{ width:180px; height:60px; top:14%; left:-15%; animation:drift 46s cubic-bezier(0.37, 0, 0.63, 1) infinite; }
+.c1::before{ width:90px; height:90px; top:-40px; left:20px; }
+.c1::after{ width:70px; height:70px; top:-25px; left:90px; }
+
+.c2{ width:220px; height:70px; top:28%; left:-20%; animation:drift 60s cubic-bezier(0.33, 0, 0.67, 1) infinite; animation-delay:-15s; }
+.c2::before{ width:100px; height:100px; top:-45px; left:30px; }
+.c2::after{ width:80px; height:80px; top:-30px; left:110px; }
+
+.c3{ width:150px; height:50px; top:8%; left:-12%; animation:drift 50s cubic-bezier(0.42, 0, 0.58, 1) infinite; animation-delay:-28s; }
+.c3::before{ width:70px; height:70px; top:-32px; left:15px; }
+
+#weatherBg[data-weather="cloudy"] .cloud{ opacity:0.55; --cloud-color:#caa47a; }
+#weatherBg[data-weather="overcast"] .cloud{ opacity:0.8; --cloud-color:#4a5560; }
+#weatherBg[data-weather="storm"] .cloud{ opacity:0.9; --cloud-color:#2c1f2a; }
+#weatherBg[data-weather="extreme"] .cloud{ opacity:0.7; --cloud-color:#5a2c1a; }
+
+@keyframes drift{
+  0%{ transform:translate3d(0, 0, 0); }
+  50%{ transform:translate3d(75vw, -6px, 0); }
+  100%{ transform:translate3d(145vw, 0, 0); }
+}
+
+/* --- rain --- */
+.rain{
+  position:absolute; inset:0;
+  opacity:0;
+  transition:opacity 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+  background-image:repeating-linear-gradient(
+    100deg,
+    rgba(59,169,245,0.45) 0px, rgba(59,169,245,0.45) 1px,
+    transparent 1px, transparent 40px
+  );
+  background-size:60px 100vh;
+  animation:rainfall 0.5s linear infinite;
+  will-change:background-position, opacity;
+}
+#weatherBg[data-weather="overcast"] .rain{ opacity:0.25; }
+#weatherBg[data-weather="storm"] .rain{ opacity:0.45; animation-duration:0.32s; }
+#weatherBg[data-weather="extreme"] .rain{ opacity:0.3; animation-duration:0.22s; }
+
+@keyframes rainfall{
+  from{ background-position:0 0; }
+  to{ background-position:-40px 100vh; }
+}
+
+/* ============================================================
+   REALISTIC LIGHTNING SYSTEM
+   ============================================================ */
+
+/* Flash kilat menyinari atmosfer/langit */
+.lightning-flash {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle at var(--strike-x, 50%) var(--strike-y, 20%), 
+    #ffffff 0%, 
+    rgba(235, 245, 255, 0.9) 25%, 
+    rgba(255, 47, 185, 0.3) 60%, 
+    transparent 85%
+  );
+  opacity: 0;
+  pointer-events: none;
+  mix-blend-mode: overlay;
+  will-change: opacity;
+}
+
+/* Batang/Cabang Petir (Jagged Bolt SVG) */
+.lightning-bolt {
+  position: absolute;
+  top: -5%;
+  left: var(--strike-x, 50%);
+  width: 220px;
+  height: 75vh;
+  transform: translateX(-50%) scaleX(var(--strike-scale, 1));
+  opacity: 0;
+  pointer-events: none;
+  filter: drop-shadow(0 0 8px #ffffff) drop-shadow(0 0 20px rgba(255, 47, 185, 0.8)) drop-shadow(0 0 35px rgba(59, 169, 245, 0.6));
+  will-change: opacity, transform;
+}
+
+.lightning-bolt svg {
+  width: 100%;
+  height: 100%;
+}
+
+.lightning-bolt path {
+  fill: none;
+  stroke: #ffffff;
+  stroke-width: 3.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Animasi kedipan kilat beneran (Strobe flicker) */
+.flash-active {
+  animation: realLightningStrike 0.42s steps(1) forwards;
+}
+
+@keyframes realLightningStrike {
+  0%   { opacity: 1; }
+  12%  { opacity: 0.15; }
+  22%  { opacity: 0.95; }
+  35%  { opacity: 0.05; }
+  48%  { opacity: 0.8; }
+  65%  { opacity: 0.2; }
+  78%  { opacity: 0.5; }
+  100% { opacity: 0; }
+}
+
+/* --- dust particles --- */
+.dust-layer{
+  position:absolute; inset:0;
+  opacity:0.3;
+  transition:opacity 1.4s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events:none;
+}
+#weatherBg[data-weather="sunny"] .dust-layer{ opacity:0.15; }
+#weatherBg[data-weather="storm"] .dust-layer{ opacity:0.55; }
+#weatherBg[data-weather="extreme"] .dust-layer{ opacity:0.85; }
+
+.mote{
+  position:absolute;
+  border-radius:50%;
+  background:var(--sand);
+  animation:swirl cubic-bezier(0.4, 0, 0.6, 1) infinite alternate;
+  will-change:transform, opacity;
+}
+@keyframes swirl{
+  0%{ 
+    transform:translate3d(0,0,0) rotate(0deg); 
+    opacity:var(--base-op, 0.4); 
+  }
+  100%{ 
+    transform:translate3d(var(--dx, 60px), var(--dy, -40px), 0) rotate(360deg); 
+    opacity:calc(var(--base-op, 0.4) * 1.4); 
+  }
+}
+
+/* --- extreme: sweeping dust wall --- */
+.dust-wall{
+  position:absolute; inset:0;
+  background:linear-gradient(100deg,
+    transparent 0%,
+    rgba(201,122,62,0) 30%,
+    rgba(201,122,62,0.55) 48%,
+    rgba(232,184,122,0.75) 52%,
+    rgba(201,122,62,0.55) 56%,
+    rgba(201,122,62,0) 70%,
+    transparent 100%
+  );
+  transform:translate3d(-120%, 0, 0);
+  opacity:0;
+  will-change:transform, opacity;
+}
+#weatherBg[data-weather="extreme"] .dust-wall{
+  opacity:1;
+  animation:sweep 6s cubic-bezier(0.37, 0, 0.63, 1) infinite;
+}
+@keyframes sweep{
+  0%{ transform:translate3d(-120%, 0, 0); }
+  50%{ transform:translate3d(30%, 0, 0); }
+  100%{ transform:translate3d(140%, 0, 0); }
+}
+
+/* --- vignette --- */
+.vignette{
+  position:absolute; inset:0;
+  background:radial-gradient(ellipse at center, rgba(0,0,0,0) 40%, rgba(0,0,0,0.45) 100%);
+  pointer-events:none;
+}
+
+/* ============================================================
+   DEMO UI
+   ============================================================ */
+.demo-content{
+  position:relative;
+  z-index:1;
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
   align-items:center;
-  gap:12px;
-  font-size:13px;
-  color:var(--text-muted);
+  justify-content:center;
+  gap:28px;
+  padding:24px;
+  text-align:center;
 }
-.pv-layer .n{font-family:var(--font-mono);font-size:12px;color:var(--text);}
-.pv-layer .bar{height:5px;border-radius:3px;background:rgba(251,241,226,0.09);overflow:hidden;}
-.pv-layer .bar i{display:block;height:100%;background:var(--sand);border-radius:3px;transition:width .6s ease;}
-.pv-layer .pct{font-family:var(--font-mono);font-size:11px;color:var(--text-dim);text-align:right;}
-.pv-note{font-size:12.5px;color:var(--text-dim);line-height:1.6;}
-.pv-note code{
-  font-family:var(--font-mono);
-  font-size:11.5px;
-  background:rgba(251,241,226,0.07);
-  border:1px solid var(--border-soft);
-  border-radius:4px;
-  padding:1px 5px;
-  color:var(--cream);
+.demo-label{
+  font-family:var(--font-display);
+  font-size:clamp(28px,5vw,44px);
+  text-shadow:0 3px 10px rgba(0,0,0,0.5);
+  transition:all 0.3s ease;
 }
+.controls{ display:flex; gap:10px; flex-wrap:wrap; justify-content:center; }
+.controls button{
+  font-family:var(--font-body);
+  font-weight:700;
+  font-size:14px;
+  padding:10px 18px;
+  border-radius:20px;
+  border:2px solid rgba(251,241,226,0.3);
+  background:rgba(0,0,0,0.25);
+  color:var(--text);
+  cursor:pointer;
+  backdrop-filter:blur(6px);
+  -webkit-backdrop-filter:blur(6px);
+  transition:all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.controls button:hover{
+  background:rgba(255,255,255,0.15);
+  transform:translateY(-2px);
+}
+.controls button.active{ 
+  background:var(--yellow); 
+  color:var(--ink); 
+  border-color:var(--yellow); 
+  transform:translateY(-1px);
+  box-shadow:0 4px 12px rgba(255,224,26,0.3);
+}
+.hint{ font-size:13px; opacity:0.75; max-width:44ch; line-height:1.5; }
 </style>
 </head>
 <body>
 
-<main class="pv">
-  <h1>Weather background</h1>
-  <p class="lede">The animated sky that sits behind the report. Every layer is always mounted; a condition only moves opacity, so switching is a CSS transition rather than a rebuild.</p>
-
-  <div class="pv-row" id="pvRow"></div>
-
-  <div class="pv-card">
-    <h2>Layers now up</h2>
-    <div class="pv-layers" id="pvLayers"></div>
+<div id="weatherBg" data-weather="extreme">
+  <div class="rays"></div>
+  <div class="sun"></div>
+  <div class="cloud c1"></div>
+  <div class="cloud c2"></div>
+  <div class="cloud c3"></div>
+  <div class="rain"></div>
+  <div class="dust-wall"></div>
+  <div class="dust-layer" id="dustLayer"></div>
+  
+  <!-- REALISTIC LIGHTNING ELEMENTS -->
+  <div class="lightning-flash" id="lightningFlash"></div>
+  <div class="lightning-bolt" id="lightningBolt">
+    <svg viewBox="0 0 100 300" preserveAspectRatio="none">
+      <!-- Main Bolt with Branches -->
+      <path d="M 50 0 L 42 70 L 60 75 L 35 150 L 52 155 L 20 230 L 38 235 L 10 300" />
+      <path d="M 42 70 L 20 110 L 28 115" stroke-width="2" opacity="0.85" />
+      <path d="M 35 150 L 65 190 L 55 195" stroke-width="2" opacity="0.8" />
+      <path d="M 20 230 L 5 260" stroke-width="1.5" opacity="0.7" />
+    </svg>
   </div>
 
-  <div class="pv-card">
-    <h2>How it is wired</h2>
-    <p class="pv-note">
-      <code>HaboobWeatherBg.mount()</code> inserts <code>#weatherBg</code> as the first
-      child of <code>&lt;body&gt;</code>, behind everything else — the report sits at
-      <code>z-index:10</code>, the dune at <code>1</code>, this at <code>0</code>.
-      <code>HaboobWeatherBg.set('storm')</code> then moves a single
-      <code>data-weather</code> attribute, and the stylesheet does the rest.
-      On the dashboard that call rides along with the condition already being
-      applied from each snapshot, so the sky and the index can never disagree.
-    </p>
-  </div>
+  <div class="vignette"></div>
+</div>
 
-  <div class="pv-card">
-    <h2>Cost</h2>
-    <p class="pv-note">
-      Animation is limited to <code>transform</code> and <code>opacity</code>, which
-      composite on the GPU and never trigger layout. Rain, lightning and the dust
-      wall hold at <code>animation-play-state:paused</code> unless their condition is
-      showing, so a sunny sky is not rendering rain nobody can see. Under
-      <code>prefers-reduced-motion</code> the movement stops and the colours stay,
-      because the colour is what carries the condition.
-    </p>
-  </div>
-</main>
+<div class="demo-content">
+  <div class="demo-label" id="demoLabel">🌪️ Extreme</div>
+  <div class="controls" id="controls"></div>
+  <p class="hint">This is just the background layer — drop #weatherBg into your page behind your existing content and toggle data-weather to match your live condition.</p>
+</div>
 
-<script src="weather-bg.js"></script>
 <script>
-// Preview harness. The dashboard drives this from snapshot data instead.
-const LAYERS = [
-  { sel: '.wb-sun',    name: 'sun / rays' },
-  { sel: '.wb-clouds', name: 'clouds' },
-  { sel: '.wb-rain',   name: 'rain' },
-  { sel: '.wb-flash',  name: 'lightning' },
-  { sel: '.wb-dust',   name: 'dust' },
-  { sel: '.wb-wall',   name: 'dust wall' }
+const conditions = [
+  { key:'sunny', label:'☀️ Sunny' },
+  { key:'cloudy', label:'⛅ Cloudy' },
+  { key:'overcast', label:'🌧️ Overcast' },
+  { key:'storm', label:'⛈️ Storm' },
+  { key:'extreme', label:'🌪️ Extreme' },
 ];
 
-HaboobWeatherBg.mount();
+const bg = document.getElementById('weatherBg');
+const label = document.getElementById('demoLabel');
+const controls = document.getElementById('controls');
 
-const row = document.getElementById('pvRow');
-const layersEl = document.getElementById('pvLayers');
+function setWeather(key){
+  bg.setAttribute('data-weather', key);
+  const cond = conditions.find(c => c.key === key);
+  label.textContent = cond.label;
+  document.querySelectorAll('.controls button').forEach(b=>{
+    b.classList.toggle('active', b.dataset.key === key);
+  });
+}
 
-function renderLayers() {
-  layersEl.innerHTML = '';
-  for (const layer of LAYERS) {
-    const node = document.querySelector('#weatherBg ' + layer.sel);
-    // Read what the stylesheet actually resolved to, not what we assume it
-    // did - this panel is here to catch a rule that did not land.
-    const opacity = node ? parseFloat(getComputedStyle(node).opacity) : 0;
+conditions.forEach(c=>{
+  const btn = document.createElement('button');
+  btn.textContent = c.label;
+  btn.dataset.key = c.key;
+  btn.addEventListener('click', ()=> setWeather(c.key));
+  controls.appendChild(btn);
+});
 
-    const rowEl = document.createElement('div');
-    rowEl.className = 'pv-layer';
-    rowEl.innerHTML = '<span class="n"></span><span class="bar"><i></i></span><span class="pct"></span>';
-    rowEl.querySelector('.n').textContent = layer.name;
-    rowEl.querySelector('.bar i').style.width = Math.round(opacity * 100) + '%';
-    rowEl.querySelector('.pct').textContent = opacity.toFixed(2);
-    layersEl.appendChild(rowEl);
+// scatter dust motes
+const dustLayer = document.getElementById('dustLayer');
+for(let i=0; i<40; i++){
+  const m = document.createElement('div');
+  m.className = 'mote';
+  const size = 1.2 + Math.random()*2.8;
+  const baseOp = 0.25 + Math.random()*0.45;
+  m.style.width = size + 'px';
+  m.style.height = size + 'px';
+  m.style.left = Math.random()*100 + '%';
+  m.style.top = Math.random()*100 + '%';
+  m.style.setProperty('--dx', (Math.random()*140-70) + 'px');
+  m.style.setProperty('--dy', (Math.random()*90-45) + 'px');
+  m.style.setProperty('--base-op', baseOp);
+  m.style.animationDuration = (7 + Math.random()*12) + 's';
+  m.style.animationDelay = (Math.random()*-15) + 's';
+  dustLayer.appendChild(m);
+}
+
+// ============================================================
+// REALISTIC LIGHTNING ENGINE
+// ============================================================
+const flashEl = document.getElementById('lightningFlash');
+const boltEl = document.getElementById('lightningBolt');
+
+function triggerStrike() {
+  const weather = bg.getAttribute('data-weather');
+
+  if (weather === 'extreme' || weather === 'storm') {
+    // Posisi x acak di langit (15% - 85%) & mirror acak
+    const strikeX = Math.floor(Math.random() * 70) + 15;
+    const strikeY = Math.floor(Math.random() * 25) + 10;
+    const flip = Math.random() > 0.5 ? 1 : -1;
+
+    bg.style.setProperty('--strike-x', strokeX = strikeX + '%');
+    bg.style.setProperty('--strike-y', strikeY + '%');
+    bg.style.setProperty('--strike-scale', flip);
+
+    // Reset kelas animasi
+    flashEl.classList.remove('flash-active');
+    boltEl.classList.remove('flash-active');
+
+    // Trigger reflow untuk re-run animasi
+    void flashEl.offsetWidth;
+
+    flashEl.classList.add('flash-active');
+    boltEl.classList.add('flash-active');
+
+    // Durasi jeda menyambar berikutnya:
+    // Extreme: 0.7 - 2.2 detik (sangat sering dan agresif)
+    // Storm: 2.5 - 6.0 detik
+    const nextInterval = weather === 'extreme' 
+      ? Math.random() * 1500 + 700 
+      : Math.random() * 3500 + 2500;
+
+    setTimeout(triggerStrike, nextInterval);
+  } else {
+    flashEl.classList.remove('flash-active');
+    boltEl.classList.remove('flash-active');
+    setTimeout(triggerStrike, 2000);
   }
 }
 
-for (const key of HaboobWeatherBg.CONDITIONS) {
-  const btn = document.createElement('button');
-  btn.type = 'button';
-  btn.className = 'pv-btn' + (key === 'cloudy' ? ' active' : '');
-  btn.textContent = key;
-  btn.addEventListener('click', () => {
-    HaboobWeatherBg.set(key);
-    document.querySelectorAll('.pv-btn').forEach((b) => b.classList.toggle('active', b === btn));
-    // Read after the transition has settled, or every bar shows the value it
-    // is leaving rather than the one it is going to.
-    setTimeout(renderLayers, 1700);
-  });
-  row.appendChild(btn);
-}
-
-renderLayers();
+// Jalankan engine petir
+triggerStrike();
+setWeather('extreme');
 </script>
+
 </body>
 </html>
