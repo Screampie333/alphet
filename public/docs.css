@@ -2,7 +2,7 @@
    Docs-page layout only. The shell (sidebar, topbar, dune, colour tokens)
    comes from styles.css, which must be loaded first. */
 
-.docs-wrap{max-width:1240px;padding:0 40px;}
+.docs-wrap{max-width:1240px;margin-inline:auto;padding:0 40px;}
 .docs-top{padding:64px 0 8px;max-width:60ch;}
 .docs-top h1{
   font-family:var(--font-display);
