@@ -1335,5 +1335,41 @@
       "observedVolumeSol": 84.74
     },
     "baselineSnapshots": 36
+  },
+  {
+    "timestamp": "2026-09-05T03:04:17.799Z",
+    "index": 65,
+    "condition": {
+      "key": "cloudy",
+      "label": "Cloudy",
+      "emoji": "⛅",
+      "summary": "Normal volume, no clear trend either way. Nothing here rewards rushing."
+    },
+    "subScores": {
+      "graduation": 100,
+      "volume": 7,
+      "rug": 100,
+      "volatility": 31,
+      "rates": {
+        "graduationRatePercent": 8.33,
+        "rugRatePercent": 0,
+        "avgPriceSwingPercent": 84.6795224902311,
+        "volumeSol": 366.9
+      }
+    },
+    "raw": {
+      "tokensCreated": 48,
+      "tokensGraduated": 4,
+      "totalVolumeSol": 366.9,
+      "tokensRugged": 0,
+      "activeTokens": 262,
+      "avgPriceSwingPercent": 84.6795224902311,
+      "source": "live",
+      "sampleSeconds": 30,
+      "observedSpanSeconds": 20,
+      "observedTrades": 311,
+      "observedVolumeSol": 24.46
+    },
+    "baselineSnapshots": 37
   }
 ]
