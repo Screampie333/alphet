@@ -3,6 +3,7 @@
 // Useful for checking whether your thresholds are sensible - if every
 // single day says "Cloudy", your cutoffs in config.js need adjusting.
 
+import { config } from "./config.js";
 import { readAll } from "./storage.js";
 
 const all = readAll();
@@ -17,7 +18,13 @@ console.log("  date                      index   condition");
 console.log("  ------------------------------------------------");
 
 for (const s of all) {
-  const date = new Date(s.timestamp).toISOString().slice(0, 16).replace("T", " ");
+  // Shown in the same zone as the dashboard rather than UTC, so a row here
+  // and a column there refer to the same hour.
+  const date = new Date(s.timestamp).toLocaleString("sv-SE", {
+    timeZone: config.displayTimeZone,
+    dateStyle: "short",
+    timeStyle: "short",
+  });
   const index = String(s.index).padStart(3, " ");
   console.log(`  ${date}      ${index}     ${s.condition.label}`);
 }

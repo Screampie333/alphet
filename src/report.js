@@ -5,6 +5,8 @@
 //   - a console version, for when you run this yourself
 //   - a short X/Twitter version, ready to post
 
+import { config } from "./config.js";
+
 // Draws a little bar like: [######----] so numbers are easier to eyeball.
 function bar(value, width = 10) {
   const filled = Math.round((value / 100) * width);
@@ -50,7 +52,11 @@ export function consoleReport(snapshot) {
 export function xPostReport(snapshot) {
   const { index, condition, subScores } = snapshot;
 
+  // Same zone the dashboard uses, so a post and the page never disagree about
+  // what day it is. Without it this took the server's own zone, which put the
+  // post a day ahead of the site whenever the two sat either side of midnight.
   const date = new Date(snapshot.timestamp).toLocaleDateString("en-US", {
+    timeZone: config.displayTimeZone,
     month: "short",
     day: "numeric",
   });

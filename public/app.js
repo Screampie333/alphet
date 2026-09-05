@@ -132,10 +132,45 @@ const el = {
   statusText: document.getElementById('statusText')
 };
 
+// Everything on the page is shown in one fixed zone, so two people reading
+// the same report in different countries are looking at the same clock.
+//
+// It also has to be the zone the *buckets* are built in, not just the one the
+// labels are printed in. Before this, hours were grouped by the viewer's own
+// clock while days were grouped in UTC - so on a browser east of UTC the last
+// hour of a day landed in the following day's row.
+const TZ = 'America/Chicago';
+
 const nf = new Intl.NumberFormat('en-US');
-const timeFmt = new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', hour12: false });
-const dayFmt = new Intl.DateTimeFormat('en-US', { weekday: 'short' });
-const fullFmt = new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' });
+const timeFmt = new Intl.DateTimeFormat('en-US', { timeZone: TZ, hour: 'numeric', minute: '2-digit', hour12: false });
+const dayFmt = new Intl.DateTimeFormat('en-US', { timeZone: TZ, weekday: 'short' });
+const fullFmt = new Intl.DateTimeFormat('en-US', { timeZone: TZ, dateStyle: 'medium', timeStyle: 'short' });
+
+// Calendar parts as they read in TZ, which is what the buckets key on.
+const partsFmt = new Intl.DateTimeFormat('en-US', {
+  timeZone: TZ,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  hourCycle: 'h23'
+});
+
+function zonedParts(date) {
+  const out = {};
+  for (const part of partsFmt.formatToParts(date)) out[part.type] = part.value;
+  return out;
+}
+
+// "2026-09-05" and "2026-09-05T14" in TZ, used as grouping keys.
+function dayKey(date) {
+  const p = zonedParts(date);
+  return `${p.year}-${p.month}-${p.day}`;
+}
+
+function hourKey(date) {
+  return `${dayKey(date)}T${zonedParts(date).hour}`;
+}
 
 /* ------------------------------------------------------------------
    RENDERING
@@ -156,15 +191,12 @@ function groupByHour(series) {
 
   for (const point of series) {
     const when = new Date(point.timestamp);
-    const start = new Date(
-      when.getFullYear(),
-      when.getMonth(),
-      when.getDate(),
-      when.getHours()
-    );
-    const key = start.getTime();
+    const key = hourKey(when);
 
-    if (!hours.has(key)) hours.set(key, { start, values: [] });
+    // The first reading of the hour stands for it. Keeping a real timestamp
+    // rather than a reconstructed one means the formatters do the zone
+    // conversion, and DST is theirs to handle rather than ours.
+    if (!hours.has(key)) hours.set(key, { key, start: when, values: [] });
     hours.get(key).values.push(point.index);
   }
 
@@ -219,7 +251,7 @@ function groupByDay(series) {
 
   for (const point of series) {
     const date = new Date(point.timestamp);
-    const key = date.toISOString().slice(0, 10);
+    const key = dayKey(date);
 
     if (!days.has(key)) {
       days.set(key, { key, date, low: point.index, high: point.index, last: point.index });
@@ -235,7 +267,7 @@ function groupByDay(series) {
 
 function renderDays(series) {
   const days = groupByDay(series);
-  const todayKey = new Date().toISOString().slice(0, 10);
+  const todayKey = dayKey(new Date());
   el.days.innerHTML = '';
 
   for (const day of days) {

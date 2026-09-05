@@ -60,6 +60,11 @@ export const config = {
     process.env.PUMPFUN_PROGRAM_ID ||
     "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P",
 
+  // The zone every timestamp is shown in - the dashboard, the X post and
+  // npm run history all read from here, so they can never disagree about
+  // what hour or day a reading belongs to.
+  displayTimeZone: process.env.DISPLAY_TZ || "America/Chicago",
+
   // Port for the web server (npm run web).
   port: Number(process.env.PORT || 3000),
 
