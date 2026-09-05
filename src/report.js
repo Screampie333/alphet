@@ -32,7 +32,13 @@ export function consoleReport(snapshot) {
     "",
     `  ${condition.summary}`,
     "",
+    // These four are the 0-100 sub-scores, where higher is always better, so
+    // the two inverted signals are named for the good direction: "rug safety"
+    // rises as the rug rate falls. The dashboard leads with the measured rates
+    // instead and shows these underneath as scores, which is why the names
+    // differ between the two - one is naming a score, the other a rate.
     "  ------------------------------------------",
+    "  sub-scores (0-100, higher is better)",
     `  Graduation  ${bar(subScores.graduation)}  ${subScores.graduation}`,
     `  Volume      ${bar(subScores.volume)}  ${subScores.volume}`,
     `  Rug safety  ${bar(subScores.rug)}  ${subScores.rug}`,

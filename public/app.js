@@ -57,14 +57,55 @@ function conditionForIndex(index) {
   return byKey.storm;
 }
 
-// The four sub-scores. Weights mirror config.js; the labels match report.js
-// ("Rug safety", "Stability") because those two are already inverted, so on
-// every tile higher means better weather.
+// The four signals, weights mirroring config.js.
+//
+// Named and oriented the same way as the timeframe panel below them.
+//
+// These tiles used to read "Rug safety 89" and "Stability 47" while the panel
+// read "Rug rate 0.14%" and "Volatility 99.5%" - the same two signals, facing
+// opposite ways, one screen apart. Now both show the measured rate, and the
+// 0-100 score that actually feeds the index sits under it as the meter.
+//
+// `rate` picks the measured value out of subScores.rates, which the scoring
+// pass already pooled over an hour, so the number and its meter describe the
+// same window.
 const signals = [
-  { key: 'graduation', name: 'Graduation', weight: '35%', cap: 'Share of new tokens reaching Raydium.' },
-  { key: 'volume',     name: 'Volume',     weight: '30%', cap: 'Trading volume against your own baseline.' },
-  { key: 'rug',        name: 'Rug safety', weight: '25%', cap: 'How few tokens rugged. Higher is safer.' },
-  { key: 'volatility', name: 'Stability',  weight: '10%', cap: 'How calm the price swings were.' }
+  {
+    key: 'graduation',
+    name: 'Graduation rate',
+    weight: '35%',
+    rate: (r) => r.graduationRatePercent,
+    unit: '%',
+    decimals: 2,
+    cap: 'Share of new tokens reaching Raydium.'
+  },
+  {
+    key: 'volume',
+    name: 'Volume',
+    weight: '30%',
+    rate: (r) => r.volumeSol,
+    unit: ' SOL',
+    decimals: 0,
+    cap: 'Trading volume against your own baseline.'
+  },
+  {
+    key: 'rug',
+    name: 'Rug rate',
+    weight: '25%',
+    rate: (r) => r.rugRatePercent,
+    unit: '%',
+    decimals: 2,
+    cap: 'Share of tracked tokens whose creator dumped. Lower is safer.'
+  },
+  {
+    key: 'volatility',
+    name: 'Volatility',
+    weight: '10%',
+    rate: (r) => r.avgPriceSwingPercent,
+    unit: '%',
+    decimals: 0,
+    cap: 'How far prices swung. Lower is calmer.'
+  }
 ];
 
 /* ------------------------------------------------------------------
@@ -378,11 +419,12 @@ function renderDays(series) {
   }
 }
 
-function renderTiles(scores, raw) {
+function renderTiles(scores, raw, rates) {
   el.tiles.innerHTML = '';
 
   for (const sig of signals) {
-    const value = scores[sig.key];
+    const score = scores[sig.key];
+    const measured = rates ? sig.rate(rates) : null;
 
     const tile = document.createElement('div');
     tile.className = 'wx-card wx-tile';
@@ -390,13 +432,29 @@ function renderTiles(scores, raw) {
       '<div class="wx-card-head"><span class="name"></span><span class="right"></span></div>' +
       '<div class="val"></div>' +
       '<div class="wx-meter"><div class="fill"></div></div>' +
-      '<div class="wx-scale-ends"><span>0</span><span>100</span></div>' +
+      '<div class="wx-scale-ends"><span class="s"></span><span>100</span></div>' +
       '<div class="cap"></div>';
 
     tile.querySelector('.name').textContent = sig.name;
     tile.querySelector('.right').textContent = sig.weight;
-    tile.querySelector('.val').textContent = value;
-    tile.querySelector('.fill').style.width = value + '%';
+
+    // The measured rate leads, the way it does in the panel below. Where a
+    // rate isn't available - the demo series carries no rates - the score
+    // stands in rather than leaving the tile blank.
+    const val = tile.querySelector('.val');
+    if (measured === null || measured === undefined) {
+      val.textContent = score;
+    } else {
+      val.textContent = formatValue(measured, sig.unit, sig.decimals);
+      const unit = document.createElement('small');
+      unit.textContent = sig.unit.trim();
+      val.appendChild(unit);
+    }
+
+    // The 0-100 score is what actually feeds the index, so it stays visible
+    // under the number as the meter and its left-hand label.
+    tile.querySelector('.fill').style.width = score + '%';
+    tile.querySelector('.wx-scale-ends .s').textContent = 'score ' + score;
     tile.querySelector('.cap').textContent = sig.cap;
 
     el.tiles.appendChild(tile);
@@ -464,7 +522,7 @@ function showDemo(cond) {
   renderHours(hourly, cond.score);
   renderHourDetail(hourly);
   renderDays(daily);
-  renderTiles(demoScores[cond.key], demoRaw[cond.key]);
+  renderTiles(demoScores[cond.key], demoRaw[cond.key], null);
 
   el.hoursMeta.textContent = 'demo';
   el.daysMeta.textContent = 'demo';
@@ -490,7 +548,7 @@ function showLive(snapshot, history) {
   renderHours(hourly, snapshot.index);
   renderHourDetail(hourly);
   renderDays(series);
-  renderTiles(snapshot.subScores, snapshot.raw);
+  renderTiles(snapshot.subScores, snapshot.raw, snapshot.subScores.rates);
 
   const readings = series.length;
   el.hoursMeta.textContent =
