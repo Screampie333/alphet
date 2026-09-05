@@ -13,6 +13,17 @@
 (function () {
   if (!window.HaboobWeatherBg) return;
 
+  // Mirrors the condition colours in app.js. Duplicated rather than exported
+  // because this file is temporary and should not leave a hook behind in the
+  // real code when it goes.
+  const COLORS = {
+    sunny: '#ffe01a',
+    cloudy: '#d9a066',
+    overcast: '#3ba9f5',
+    storm: '#ff2fb9',
+    extreme: '#c97a3e'
+  };
+
   const LABELS = {
     sunny: 'Sunny',
     cloudy: 'Cloudy',
@@ -20,6 +31,15 @@
     storm: 'Storm',
     extreme: 'Extreme'
   };
+
+  // renderNow paints the mascot glow with an inline style, which a CSS
+  // variable cannot reach - so the preview has to set it directly or the sky
+  // and the glow disagree.
+  function applyAccent(key){
+    document.documentElement.style.setProperty('--accent', COLORS[key]);
+    const glow = document.getElementById('mascotGlow');
+    if (glow) glow.style.background = COLORS[key];
+  }
 
   const liveSet = HaboobWeatherBg.set;
   let pinned = null;
@@ -123,6 +143,11 @@
     btn.addEventListener('click', () => {
       pinned = key;
       liveSet(key);
+      // The accent tints the mascot glow and the index, so it follows the
+      // pinned sky too - otherwise a rust sky sits under a blue glow and the
+      // preview says nothing about how the pairing really looks. The numbers
+      // and the condition label stay honest; only the colouring is previewed.
+      applyAccent(key);
       paint();
     });
     row.appendChild(btn);
@@ -137,7 +162,10 @@
     pinned = null;
     // Snap back to whatever the data last said, which was recorded while the
     // panel was holding the sky.
-    if (liveCondition) liveSet(liveCondition);
+    if (liveCondition) {
+      liveSet(liveCondition);
+      applyAccent(liveCondition);
+    }
     paint();
   });
   row.appendChild(live);

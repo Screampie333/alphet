@@ -277,11 +277,13 @@ a{color:inherit;text-decoration:none;}
 .block{padding:54px 0;}
 .block + .block{border-top:1px solid var(--border-soft);}
 
+/* No background of its own any more. This used to carry a fixed warm glow,
+   which was fine when it was the only sky there was - but it does not change
+   with the condition, so once the animated background arrived it sat on top
+   washing every condition back towards the same brown. The sky belongs to
+   weather-bg.css now. */
 .hero{
   padding:52px 0 46px;
-  background:
-    radial-gradient(ellipse 640px 380px at 82% -10%, rgba(201,122,62,0.28), transparent 62%),
-    radial-gradient(ellipse 520px 340px at 8% 115%, rgba(59,169,245,0.08), transparent 60%);
 }
 .eyebrow{
   display:inline-block;

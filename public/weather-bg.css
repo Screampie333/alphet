@@ -189,9 +189,10 @@
 /* --- SUNNY: high sun, thin cloud, clear air --- */
 #weatherBg[data-weather="sunny"] .wb-sky{
   background:
-    radial-gradient(ellipse 1000px 620px at 76% -12%, rgba(255,224,26,0.20), transparent 60%),
-    radial-gradient(ellipse 900px 520px at 74% -8%,  rgba(201,122,62,0.34), transparent 64%),
-    radial-gradient(ellipse 700px 460px at 12% 108%, rgba(232,184,122,0.10), transparent 60%);
+    radial-gradient(ellipse 1000px 620px at 76% -12%, rgba(255,224,26,0.26), transparent 58%),
+    radial-gradient(ellipse 1100px 700px at 74% -4%,  rgba(201,122,62,0.40), transparent 66%),
+    radial-gradient(ellipse 800px 520px at 10% 108%,  rgba(232,184,122,0.14), transparent 62%),
+    linear-gradient(175deg, #33230c 0%, #241a0e 52%, #1b130c 100%);
 }
 #weatherBg[data-weather="sunny"] .wb-sun{opacity:1;}
 #weatherBg[data-weather="sunny"] .wb-clouds{opacity:0.34;}
@@ -200,8 +201,9 @@
 /* --- CLOUDY: the default. Sand haze, drifting cover --- */
 #weatherBg[data-weather="cloudy"] .wb-sky{
   background:
-    radial-gradient(ellipse 900px 520px at 74% -8%,  rgba(201,122,62,0.30), transparent 62%),
-    radial-gradient(ellipse 700px 460px at 12% 108%, rgba(59,169,245,0.07), transparent 60%);
+    radial-gradient(ellipse 950px 560px at 74% -8%,  rgba(201,122,62,0.36), transparent 62%),
+    radial-gradient(ellipse 760px 480px at 12% 108%, rgba(59,169,245,0.08), transparent 60%),
+    linear-gradient(175deg, #2b1d12 0%, #221710 55%, #1a120c 100%);
 }
 #weatherBg[data-weather="cloudy"] .wb-sun{opacity:0.22;}
 #weatherBg[data-weather="cloudy"] .wb-clouds{opacity:1;}
@@ -210,9 +212,9 @@
 /* --- OVERCAST: cooler, heavier cover, light rain --- */
 #weatherBg[data-weather="overcast"] .wb-sky{
   background:
-    radial-gradient(ellipse 1100px 620px at 60% -14%, rgba(59,169,245,0.15), transparent 64%),
-    radial-gradient(ellipse 900px 520px at 78% 4%,    rgba(120,116,120,0.20), transparent 66%),
-    radial-gradient(ellipse 700px 460px at 10% 108%,  rgba(59,169,245,0.09), transparent 60%);
+    radial-gradient(ellipse 1150px 640px at 58% -14%, rgba(59,169,245,0.20), transparent 62%),
+    radial-gradient(ellipse 950px 560px at 80% 4%,    rgba(120,132,150,0.24), transparent 66%),
+    linear-gradient(175deg, #18202a 0%, #151a20 55%, #121417 100%);
 }
 #weatherBg[data-weather="overcast"] .wb-clouds{opacity:1;}
 #weatherBg[data-weather="overcast"] .wb-clouds i{background:rgba(150,160,175,0.16);}
@@ -222,9 +224,9 @@
 /* --- STORM: dark, hard rain, lightning --- */
 #weatherBg[data-weather="storm"] .wb-sky{
   background:
-    radial-gradient(ellipse 1200px 700px at 52% -16%, rgba(255,47,185,0.14), transparent 62%),
-    radial-gradient(ellipse 900px 560px at 80% 8%,    rgba(70,64,86,0.40),   transparent 66%),
-    radial-gradient(ellipse 800px 500px at 8% 106%,   rgba(59,169,245,0.10), transparent 60%);
+    radial-gradient(ellipse 1250px 720px at 50% -16%, rgba(255,47,185,0.20), transparent 60%),
+    radial-gradient(ellipse 950px 600px at 82% 8%,    rgba(86,74,112,0.44),  transparent 66%),
+    linear-gradient(175deg, #221a2e 0%, #1a1622 55%, #14111a 100%);
 }
 #weatherBg[data-weather="storm"] .wb-clouds{opacity:1;}
 #weatherBg[data-weather="storm"] .wb-clouds i{background:rgba(96,88,110,0.30);}
@@ -235,9 +237,9 @@
 /* --- EXTREME: the haboob arrives --- */
 #weatherBg[data-weather="extreme"] .wb-sky{
   background:
-    radial-gradient(ellipse 1200px 720px at 40% -10%, rgba(201,122,62,0.46), transparent 64%),
-    radial-gradient(ellipse 900px 600px at 84% 16%,   rgba(160,92,44,0.34),  transparent 68%),
-    radial-gradient(ellipse 800px 500px at 6% 104%,   rgba(255,47,185,0.08), transparent 60%);
+    radial-gradient(ellipse 1250px 760px at 38% -10%, rgba(232,147,90,0.42), transparent 62%),
+    radial-gradient(ellipse 1000px 640px at 86% 16%,  rgba(160,92,44,0.46),  transparent 68%),
+    linear-gradient(175deg, #47250e 0%, #331a0b 50%, #21140a 100%);
 }
 #weatherBg[data-weather="extreme"] .wb-clouds{opacity:0.8;}
 #weatherBg[data-weather="extreme"] .wb-clouds i{background:rgba(201,122,62,0.26);}
