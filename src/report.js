@@ -21,7 +21,11 @@ export function consoleReport(snapshot) {
     "",
     "==============================================",
     `  HABOOB WEATHER REPORT`,
-    `  ${new Date(snapshot.timestamp).toUTCString()}`,
+    `  ${new Date(snapshot.timestamp).toLocaleString("en-US", {
+      timeZone: config.displayTimeZone,
+      dateStyle: "full",
+      timeStyle: "short",
+    })}`,
     "==============================================",
     "",
     `  ${condition.emoji}  ${condition.label.toUpperCase()}   -   index ${index}/100`,

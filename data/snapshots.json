@@ -1371,5 +1371,113 @@
       "observedVolumeSol": 24.46
     },
     "baselineSnapshots": 37
+  },
+  {
+    "timestamp": "2026-09-05T03:09:28.422Z",
+    "index": 30,
+    "condition": {
+      "key": "overcast",
+      "label": "Overcast",
+      "emoji": "🌧️",
+      "summary": "Volume is fading and fewer tokens are making it off the bonding curve."
+    },
+    "subScores": {
+      "graduation": 0,
+      "volume": 15,
+      "rug": 100,
+      "volatility": 9,
+      "rates": {
+        "graduationRatePercent": 0,
+        "rugRatePercent": 0,
+        "avgPriceSwingPercent": 113.58550662449147,
+        "volumeSol": 706.82
+      }
+    },
+    "raw": {
+      "tokensCreated": 54,
+      "tokensGraduated": 0,
+      "totalVolumeSol": 706.82,
+      "tokensRugged": 0,
+      "activeTokens": 264,
+      "avgPriceSwingPercent": 113.58550662449147,
+      "source": "live",
+      "sampleSeconds": 30,
+      "observedSpanSeconds": 20,
+      "observedTrades": 243,
+      "observedVolumeSol": 47.12
+    },
+    "baselineSnapshots": 38
+  },
+  {
+    "timestamp": "2026-09-05T03:14:26.332Z",
+    "index": 38,
+    "condition": {
+      "key": "overcast",
+      "label": "Overcast",
+      "emoji": "🌧️",
+      "summary": "Volume is fading and fewer tokens are making it off the bonding curve."
+    },
+    "subScores": {
+      "graduation": 26,
+      "volume": 10,
+      "rug": 100,
+      "volatility": 9,
+      "rates": {
+        "graduationRatePercent": 1.61,
+        "rugRatePercent": 0,
+        "avgPriceSwingPercent": 114.94098737035691,
+        "volumeSol": 469.68
+      }
+    },
+    "raw": {
+      "tokensCreated": 62,
+      "tokensGraduated": 1,
+      "totalVolumeSol": 469.68,
+      "tokensRugged": 0,
+      "activeTokens": 268,
+      "avgPriceSwingPercent": 114.94098737035691,
+      "source": "live",
+      "sampleSeconds": 30,
+      "observedSpanSeconds": 20,
+      "observedTrades": 240,
+      "observedVolumeSol": 31.31
+    },
+    "baselineSnapshots": 39
+  },
+  {
+    "timestamp": "2026-09-05T03:19:27.021Z",
+    "index": 62,
+    "condition": {
+      "key": "extreme",
+      "label": "Extreme",
+      "emoji": "🌪️",
+      "summary": "Wild swings across the board. One token is dragging the whole market, or everything is moving at once."
+    },
+    "subScores": {
+      "graduation": 100,
+      "volume": 8,
+      "rug": 100,
+      "volatility": 0,
+      "rates": {
+        "graduationRatePercent": 8.33,
+        "rugRatePercent": 0,
+        "avgPriceSwingPercent": 148.8330385200332,
+        "volumeSol": 388.09
+      }
+    },
+    "raw": {
+      "tokensCreated": 60,
+      "tokensGraduated": 5,
+      "totalVolumeSol": 388.09,
+      "tokensRugged": 0,
+      "activeTokens": 272,
+      "avgPriceSwingPercent": 148.8330385200332,
+      "source": "live",
+      "sampleSeconds": 30,
+      "observedSpanSeconds": 20,
+      "observedTrades": 218,
+      "observedVolumeSol": 25.87
+    },
+    "baselineSnapshots": 40
   }
 ]
