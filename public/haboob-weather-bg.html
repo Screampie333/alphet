@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Weather background — Haboob</title>
+<meta name="description" content="Preview harness for the animated weather background: every condition, switchable, with the layer stack visible.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bungee&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="weather-bg.css">
+<style>
+/* Preview chrome only - the background itself is entirely weather-bg.css.
+   This page exists so the sky can be judged on its own, without the report
+   sitting on top of it. */
+body{min-height:100vh;}
+.pv{
+  position:relative;
+  z-index:10;
+  max-width:760px;
+  margin-inline:auto;
+  padding:64px 24px 96px;
+}
+.pv h1{
+  font-family:var(--font-display);
+  font-size:clamp(24px,4vw,36px);
+  margin-bottom:10px;
+  text-shadow:3px 3px 0 rgba(0,0,0,0.35);
+}
+.pv .lede{color:var(--text-muted);margin-bottom:28px;max-width:58ch;}
+.pv-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:28px;}
+.pv-btn{
+  font-family:var(--font-body);
+  font-size:13.5px;
+  font-weight:500;
+  padding:9px 16px;
+  border-radius:20px;
+  border:1px solid var(--border);
+  background:rgba(20,13,8,0.55);
+  color:var(--text-muted);
+  cursor:pointer;
+  backdrop-filter:blur(8px);
+  transition:all .15s ease;
+}
+.pv-btn:hover{border-color:var(--sand);color:var(--text);}
+.pv-btn.active{background:var(--sand);border-color:var(--sand);color:var(--ink);font-weight:700;}
+
+.pv-card{
+  background:rgba(20,13,8,0.55);
+  border:1px solid var(--border);
+  border-radius:16px;
+  padding:20px 22px;
+  backdrop-filter:blur(10px);
+  margin-bottom:14px;
+}
+.pv-card h2{
+  font-family:var(--font-display);
+  font-size:15px;
+  margin-bottom:12px;
+}
+.pv-layers{display:grid;gap:8px;}
+.pv-layer{
+  display:grid;
+  grid-template-columns:110px 1fr 44px;
+  align-items:center;
+  gap:12px;
+  font-size:13px;
+  color:var(--text-muted);
+}
+.pv-layer .n{font-family:var(--font-mono);font-size:12px;color:var(--text);}
+.pv-layer .bar{height:5px;border-radius:3px;background:rgba(251,241,226,0.09);overflow:hidden;}
+.pv-layer .bar i{display:block;height:100%;background:var(--sand);border-radius:3px;transition:width .6s ease;}
+.pv-layer .pct{font-family:var(--font-mono);font-size:11px;color:var(--text-dim);text-align:right;}
+.pv-note{font-size:12.5px;color:var(--text-dim);line-height:1.6;}
+.pv-note code{
+  font-family:var(--font-mono);
+  font-size:11.5px;
+  background:rgba(251,241,226,0.07);
+  border:1px solid var(--border-soft);
+  border-radius:4px;
+  padding:1px 5px;
+  color:var(--cream);
+}
+</style>
+</head>
+<body>
+
+<main class="pv">
+  <h1>Weather background</h1>
+  <p class="lede">The animated sky that sits behind the report. Every layer is always mounted; a condition only moves opacity, so switching is a CSS transition rather than a rebuild.</p>
+
+  <div class="pv-row" id="pvRow"></div>
+
+  <div class="pv-card">
+    <h2>Layers now up</h2>
+    <div class="pv-layers" id="pvLayers"></div>
+  </div>
+
+  <div class="pv-card">
+    <h2>How it is wired</h2>
+    <p class="pv-note">
+      <code>HaboobWeatherBg.mount()</code> inserts <code>#weatherBg</code> as the first
+      child of <code>&lt;body&gt;</code>, behind everything else — the report sits at
+      <code>z-index:10</code>, the dune at <code>1</code>, this at <code>0</code>.
+      <code>HaboobWeatherBg.set('storm')</code> then moves a single
+      <code>data-weather</code> attribute, and the stylesheet does the rest.
+      On the dashboard that call rides along with the condition already being
+      applied from each snapshot, so the sky and the index can never disagree.
+    </p>
+  </div>
+
+  <div class="pv-card">
+    <h2>Cost</h2>
+    <p class="pv-note">
+      Animation is limited to <code>transform</code> and <code>opacity</code>, which
+      composite on the GPU and never trigger layout. Rain, lightning and the dust
+      wall hold at <code>animation-play-state:paused</code> unless their condition is
+      showing, so a sunny sky is not rendering rain nobody can see. Under
+      <code>prefers-reduced-motion</code> the movement stops and the colours stay,
+      because the colour is what carries the condition.
+    </p>
+  </div>
+</main>
+
+<script src="weather-bg.js"></script>
+<script>
+// Preview harness. The dashboard drives this from snapshot data instead.
+const LAYERS = [
+  { sel: '.wb-sun',    name: 'sun / rays' },
+  { sel: '.wb-clouds', name: 'clouds' },
+  { sel: '.wb-rain',   name: 'rain' },
+  { sel: '.wb-flash',  name: 'lightning' },
+  { sel: '.wb-dust',   name: 'dust' },
+  { sel: '.wb-wall',   name: 'dust wall' }
+];
+
+HaboobWeatherBg.mount();
+
+const row = document.getElementById('pvRow');
+const layersEl = document.getElementById('pvLayers');
+
+function renderLayers() {
+  layersEl.innerHTML = '';
+  for (const layer of LAYERS) {
+    const node = document.querySelector('#weatherBg ' + layer.sel);
+    // Read what the stylesheet actually resolved to, not what we assume it
+    // did - this panel is here to catch a rule that did not land.
+    const opacity = node ? parseFloat(getComputedStyle(node).opacity) : 0;
+
+    const rowEl = document.createElement('div');
+    rowEl.className = 'pv-layer';
+    rowEl.innerHTML = '<span class="n"></span><span class="bar"><i></i></span><span class="pct"></span>';
+    rowEl.querySelector('.n').textContent = layer.name;
+    rowEl.querySelector('.bar i').style.width = Math.round(opacity * 100) + '%';
+    rowEl.querySelector('.pct').textContent = opacity.toFixed(2);
+    layersEl.appendChild(rowEl);
+  }
+}
+
+for (const key of HaboobWeatherBg.CONDITIONS) {
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'pv-btn' + (key === 'cloudy' ? ' active' : '');
+  btn.textContent = key;
+  btn.addEventListener('click', () => {
+    HaboobWeatherBg.set(key);
+    document.querySelectorAll('.pv-btn').forEach((b) => b.classList.toggle('active', b === btn));
+    // Read after the transition has settled, or every bar shows the value it
+    // is leaving rather than the one it is going to.
+    setTimeout(renderLayers, 1700);
+  });
+  row.appendChild(btn);
+}
+
+renderLayers();
+</script>
+</body>
+</html>

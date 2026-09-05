@@ -484,6 +484,12 @@ function renderTiles(scores, raw, rates) {
 function renderNow(cond, index, summary, readings) {
   document.documentElement.style.setProperty('--accent', cond.color);
 
+  // The sky turns with the reading. This rides along with the accent colour
+  // rather than being called separately, because renderNow is the one place a
+  // condition is ever applied - hooking it here is what stops the background
+  // and the index from drifting apart.
+  if (window.HaboobWeatherBg) HaboobWeatherBg.set(cond.key);
+
   el.index.innerHTML = '';
   el.index.append(String(index));
   const sup = document.createElement('sup');
@@ -578,6 +584,10 @@ function timeAgo(iso) {
 /* ------------------------------------------------------------------
    SIDEBAR SHELL  (shared behaviour lives in shell.js)
    ------------------------------------------------------------------ */
+
+// Mounted before the first paint of the report, so the sky is already the
+// right colour when the reading lands rather than fading in after it.
+if (window.HaboobWeatherBg) HaboobWeatherBg.mount();
 
 HaboobShell.initDrawer();
 HaboobShell.initContractCopy();

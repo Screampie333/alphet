@@ -395,7 +395,8 @@ h1 .hl{color:var(--sand);}
   bottom:0;
   left:var(--sidebar-w);
   right:0;
-  z-index:0;
+  /* One above the weather background, which sits at 0. */
+  z-index:1;
   pointer-events:none;
   opacity:0.42;
   line-height:0;
