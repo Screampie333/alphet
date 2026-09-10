@@ -13,3 +13,7 @@ backup/
 
 # wrangler's local cache - contains the account id and account name
 .wrangler/
+
+# Cloudflare API token, handed over by hand and deleted straight after.
+# Never allowed near a commit.
+cftoken.txt
