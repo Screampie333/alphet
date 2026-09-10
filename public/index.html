@@ -140,7 +140,7 @@
           <div class="gauge-seam" id="gaugeSeam">
             <div class="seam-line"></div>
             <div class="seam-badge">
-              <svg viewBox="0 0 100 100" aria-hidden="true"><use href="#alphet-mark-detail"></use></svg>
+              <svg viewBox="0 0 100 100" aria-hidden="true"><use href="#alphet-mark"></use></svg>
             </div>
           </div>
         </div>
@@ -301,9 +301,11 @@
      Both halves are light now, so every line that has to read against them
      - the seam, the brows, the scrollwork - is drawn in near-black.
 
-     Two variants, because detail that reads at 42px is mush at 24px:
-       #alphet-mark         heart + seam only, for the sidebar and tab bar
-       #alphet-mark-detail  the full mark, for the seam badge on the gauge
+     There used to be a stripped-back second variant for the sidebar, on the
+     theory that detail reading at 42px would be mush at 30px. One mark is
+     worth more than that saving: a brand seen at two sizes should be the
+     same brand. The sidebar mark is a little larger than it was to buy the
+     linework back.
      ============================================================ -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <defs>
@@ -326,14 +328,6 @@
   </defs>
 
   <g id="alphet-mark">
-    <use href="#alphet-heart" fill="#ccff00"/>
-    <g clip-path="url(#alphet-heart-clip)">
-      <use href="#alphet-beta-half" fill="#ffffff"/>
-      <use href="#alphet-seam" fill="none" stroke="#0b0809" stroke-width="3"/>
-    </g>
-  </g>
-
-  <g id="alphet-mark-detail">
     <use href="#alphet-heart" fill="#ccff00"/>
     <g clip-path="url(#alphet-heart-clip)">
       <use href="#alphet-beta-half" fill="#ffffff"/>
