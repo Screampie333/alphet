@@ -640,7 +640,7 @@
    * actually names the token you are about to buy.
    */
   function addressButton(token) {
-    var btn = el("button", "token-ca" + (token.duplicateSymbol ? " token-ca-dupe" : ""));
+    var btn = el("button", "token-ca");
     btn.type = "button";
 
     var label = el("span", "token-ca-text", shortAddress(token.address));
@@ -738,16 +738,13 @@
       score.style.color = scoreColor(token.quality);
       score.style.fontWeight = "700";
 
-      // Dropping the venue column took a real signal with it: a score built on
-      // three metrics instead of four is a weaker claim, and the venue was how
-      // you could tell. This puts that back as a mark rather than a column.
+      // Which metrics were readable stays in the tooltip rather than as a
+      // mark on the number - the asterisk sat on most rows, and a footnote
+      // that applies to almost everything stops being a footnote.
       var gaps = token.unmeasured || [];
       if (gaps.length) {
-        var mark = el("span", "token-partial", "*");
-        mark.title = gaps.length + " metric" + (gaps.length > 1 ? "s" : "") +
-          " couldn't be read for this token (" + gaps.join(", ") + "). " +
-          "Its score is the remaining ones, reweighted.";
-        score.appendChild(mark);
+        score.title = gaps.length + " of 4 metrics couldn't be read for this token (" +
+          gaps.join(", ") + "). Its score is the rest, reweighted.";
       }
       row.appendChild(score);
 

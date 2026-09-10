@@ -10,3 +10,6 @@ data/chain-cache.json
 
 # old Haboob archives - kept locally, not published
 backup/
+
+# wrangler's local cache - contains the account id and account name
+.wrangler/

@@ -762,13 +762,6 @@ h1 {
   color: var(--muted);
 }
 
-/* Marks a score built on fewer than four metrics. */
-.token-partial {
-  color: var(--dim);
-  font-weight: 400;
-  cursor: help;
-  margin-left: 1px;
-}
 
 /* A run that couldn't read part of its shortlist. Not an error the page can
    fix, but not something it may quietly round off either. */
@@ -882,10 +875,6 @@ h1 {
 .token-ca:hover { color: var(--ink); background: var(--panel-2); padding-left: 5px; }
 .token-ca-icon { opacity: 0.55; font-size: 10px; }
 .token-ca:hover .token-ca-icon { opacity: 1; }
-
-/* A shared ticker is a real hazard, so those addresses stay marked. */
-.token-ca-dupe { color: var(--beta); }
-.token-ca-dupe:hover { color: var(--beta); }
 
 .token-ca.copied { color: #35d07f; background: rgba(53, 208, 127, 0.1); padding-left: 5px; }
 .token-ca.copied .token-ca-icon { opacity: 0; }
