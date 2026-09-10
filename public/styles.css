@@ -3,6 +3,12 @@
    Two colours carry the whole product: navy is Alpha, magenta is Beta.
    Nothing else on the page is allowed to use either of them, so wherever
    you see one you are looking at a side of the split.
+
+   A third, --rhc, is Robinhood Chain's own lime, and it is never a side.
+   It marks the ground rather than the verdict: the chain's name, the live
+   link to it, and addresses on it. Keeping it off the split is what lets
+   it sit on the same page without competing - a token is Alpha or Beta,
+   and all of them are on Robinhood Chain.
    ============================================================ */
 
 :root {
@@ -19,6 +25,14 @@
   --beta-mid: #d21f80;
   --beta-deep: #7d1050;
   --beta-glow: rgba(245, 48, 156, 0.32);
+
+  /* Robinhood Chain's brand lime. On this near-black ground it is the
+     brightest thing available, which is why it is rationed: the chain's
+     name, the feed dot, a copied address, and a wash at the foot of the
+     page. Anywhere it appears, it is pointing at the chain. */
+  --rhc: #ccff00;
+  --rhc-glow: rgba(204, 255, 0, 0.22);
+  --rhc-soft: rgba(204, 255, 0, 0.12);
 
   --tan: #b39371;
 
@@ -50,7 +64,8 @@ body {
 }
 
 /* A faint wash of both sides behind everything, so the page itself reads as
-   the same split the gauge does. */
+   the same split the gauge does - with the chain's lime rising off the
+   bottom edge, under both of them. */
 body::before {
   content: "";
   position: fixed;
@@ -59,10 +74,22 @@ body::before {
   z-index: 0;
   background:
     radial-gradient(60vw 50vh at 12% -8%, rgba(91, 155, 255, 0.13), transparent 65%),
-    radial-gradient(55vw 45vh at 95% 4%, rgba(245, 48, 156, 0.10), transparent 62%);
+    radial-gradient(55vw 45vh at 95% 4%, rgba(245, 48, 156, 0.10), transparent 62%),
+    radial-gradient(80vw 38vh at 50% 106%, rgba(204, 255, 0, 0.055), transparent 60%);
 }
 
 a { color: inherit; text-decoration: none; }
+
+/* The page had no focus ring at all, which made the sidebar and the pager
+   unusable by keyboard. The chain's lime is the one colour here bright
+   enough to be unmissable against every panel without meaning Alpha or
+   Beta, so it does the job. */
+:focus-visible {
+  outline: 2px solid var(--rhc);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+::selection { background: var(--rhc); color: var(--bg); }
 h1, h2, h3 { margin: 0; line-height: 1.15; letter-spacing: -0.02em; }
 
 /* ============================================================
@@ -196,12 +223,12 @@ h1, h2, h3 { margin: 0; line-height: 1.15; letter-spacing: -0.02em; }
 .ca-text { display: flex; flex-direction: column; min-width: 0; flex: 1; }
 .ca-label { font-size: 10px; letter-spacing: 0.09em; text-transform: uppercase; color: var(--dim); }
 .ca-value { font-family: var(--mono); font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; }
-.ca-value.copied { color: var(--alpha); }
+.ca-value.copied { color: var(--rhc); }
 .ca-copy { width: 15px; height: 15px; color: var(--dim); flex: none; }
 
 .status { display: flex; align-items: center; gap: 8px; padding: 0 8px; font-size: 13px; color: var(--muted); }
 .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--dim); flex: none; }
-.dot.live { background: #35d07f; box-shadow: 0 0 0 3px rgba(53, 208, 127, 0.16); }
+.dot.live { background: var(--rhc); box-shadow: 0 0 0 3px var(--rhc-soft); }
 
 .btn-cta {
   display: flex;
@@ -235,11 +262,12 @@ h1 {
   font-weight: 700;
   max-width: 20ch;
 }
+/* The chain's name, in the chain's colour. This used to be an Alpha-to-Beta
+   gradient, which read as a pun on the split but spent the two colours on a
+   phrase that is neither. */
 .hl {
-  background: linear-gradient(96deg, var(--alpha), var(--beta));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  color: var(--rhc);
+  text-shadow: 0 0 42px var(--rhc-glow);
 }
 
 .lede { color: var(--muted); font-size: 16px; max-width: 62ch; margin: 16px 0 0; }
@@ -405,7 +433,7 @@ h1 {
 }
 .sample-btn:hover { color: var(--ink); border-color: #34343f; }
 .sample-btn.active { background: var(--ink); color: var(--bg); border-color: var(--ink); font-weight: 700; }
-.sample-btn.live-btn.active { background: #35d07f; border-color: #35d07f; }
+.sample-btn.live-btn.active { background: var(--rhc); border-color: var(--rhc); }
 
 /* ============================================================
    CARDS
@@ -698,6 +726,7 @@ h1 {
   flex-wrap: wrap;
 }
 .foot p { margin: 0; }
+.chain-tag { color: var(--rhc); font-weight: 700; }
 
 /* ============================================================
    RESPONSIVE
@@ -876,5 +905,5 @@ h1 {
 .token-ca-icon { opacity: 0.55; font-size: 10px; }
 .token-ca:hover .token-ca-icon { opacity: 1; }
 
-.token-ca.copied { color: #35d07f; background: rgba(53, 208, 127, 0.1); padding-left: 5px; }
+.token-ca.copied { color: var(--rhc); background: var(--rhc-soft); padding-left: 5px; }
 .token-ca.copied .token-ca-icon { opacity: 0; }
