@@ -739,7 +739,11 @@ async function fillMissingImages(pools) {
 }
 
 async function readToken(pool, ctx) {
-  const { head, blocksPerSec } = ctx;
+  const { head, blocksPerSec, rank = 0 } = ctx;
+
+  // Highest volume first, so the indexer budget goes where the gauge is
+  // actually weighted. Everything past the cut still gets the RPC path.
+  const mayUseIndexer = blockscout.enabled() && rank < config.indexerTokenLimit;
 
   // GeckoTerminal knows exactly when the pool opened, which saves guessing how
   // far back the Transfer log goes. For anything older than the lookback the
@@ -771,18 +775,23 @@ async function readToken(pool, ctx) {
     // The indexer answers holders and the deployer outright when a key is set.
     // The RPC fallback below still runs otherwise, but it cannot enumerate a
     // busy token's holders and says so rather than guessing.
-    holders = blockscout.enabled()
+    holders = mayUseIndexer
       ? await blockscout
           .getHolderDistribution(pool.address, [pool.poolAddress])
           .catch(async (err) => {
-            console.error(`  blockscout holders failed for ${pool.symbol}: ${err.message}`);
+            // Said once, not once per token: a fatal error has already
+            // switched the indexer off for the rest of the run.
+            if (err.fatal) console.error(`
+  ${err.message} - falling back to RPC for the rest of this run.
+`);
+            else console.error(`  blockscout holders failed for ${pool.symbol}: ${err.message}`);
             return getHolderDistribution(pool.address, fromBlock, head, [pool.poolAddress]);
           })
       : await getHolderDistribution(pool.address, fromBlock, head, [pool.poolAddress]);
 
     liquidity = await checkLiquidityLocked(pool.poolAddress, pool.dex);
 
-    dev = blockscout.enabled()
+    dev = mayUseIndexer
       ? await blockscout.getCreator(pool.address).catch(() => null)
       : null;
     if (!dev) dev = await findDeployer(pool.address, createdBlock, excluded);
@@ -915,7 +924,7 @@ export async function collect({ mock = false } = {}) {
 
   for (const [index, pool] of shortlist.entries()) {
     try {
-      tokens.push(await readToken(pool, ctx));
+      tokens.push(await readToken(pool, { ...ctx, rank: index }));
     } catch (err) {
       console.error(`  skipped ${pool.symbol} (${pool.address}): ${err.message}`);
       skipped.push({ symbol: pool.symbol, address: pool.address, reason: err.message.slice(0, 120) });

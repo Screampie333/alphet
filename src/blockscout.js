@@ -29,8 +29,22 @@ import { config } from "./config.js";
 
 export const apiCalls = { count: 0 };
 
+// Set when the account is out of credits or the key is refused.
+//
+// Both are answered per request, so without this a run keeps asking - once
+// per token, several hundred times - and every one of them fails the same way
+// after burning its retries. The first refusal is enough to know the rest of
+// the run will be refused too, so the indexer is switched off and the RPC
+// fallback takes over quietly.
+let shutOff = null;
+
 export function enabled() {
-  return Boolean(config.blockscoutKey);
+  return Boolean(config.blockscoutKey) && !shutOff;
+}
+
+/** Why the indexer stopped being used this run, if it did. */
+export function disabledReason() {
+  return shutOff;
 }
 
 function sleep(ms) {
@@ -70,10 +84,19 @@ async function attemptOnce(url) {
       signal: controller.signal,
     });
 
-    // Missing or spent key. Waiting will not fix it, so it stops the run's
-    // indexer path rather than being retried 150 times.
+    // Two different problems share this pair of codes, and the body says
+    // which: a key the service will not accept, or a valid key on an account
+    // with nothing left to spend. Neither is fixed by waiting, and both apply
+    // to every later call, so the indexer shuts off for the rest of the run.
     if (res.status === 402 || res.status === 401) {
-      const err = new Error(`Blockscout rejected the API key (${res.status}) - check BLOCKSCOUT_API_KEY`);
+      const body = await res.text().catch(() => "");
+      const outOfCredits = /out of credits/i.test(body);
+
+      shutOff = outOfCredits
+        ? "Blockscout account is out of credits"
+        : `Blockscout refused the API key (HTTP ${res.status})`;
+
+      const err = new Error(shutOff);
       err.fatal = true;
       throw err;
     }

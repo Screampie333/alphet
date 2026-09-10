@@ -55,8 +55,11 @@ export const config = {
   // "not measurable" for every large token and developer track record falls
   // back to a deployer lookup that misses about three quarters of the time.
   //
-  // Free tier at dev.blockscout.com: 5 req/s, 100k credits/day. A 150-token
-  // run spends roughly 600.
+  // Free tier at dev.blockscout.com is 100,000 credits a MONTH, and each call
+  // costs 20 - so 5,000 calls a month in total, not the per-day budget the
+  // docs suggest. Measured: one run asking about every token spent 1,000
+  // calls, a fifth of the month. indexerTokenLimit and readCacheMinutes are
+  // what keep it inside that.
   blockscoutKey: process.env.BLOCKSCOUT_API_KEY || "",
   get blockscoutBase() {
     return process.env.BLOCKSCOUT_BASE || `https://api.blockscout.com/${this.chainId}/api/v2`;
@@ -161,8 +164,25 @@ export const config = {
   //
   // Tokens younger than newTokenHours are always re-read: a launch's holder
   // set changes by the minute, which is exactly when it matters most.
-  readCacheMinutes: Number(process.env.READ_CACHE_MINUTES || 360),
-  newTokenHours: Number(process.env.NEW_TOKEN_HOURS || 12),
+  //
+  // Everything older is cached for a month. That is deliberate rather than
+  // lazy - an established token's top-10 share barely moves week to week,
+  // while re-reading it every few hours is what burned a monthly API budget
+  // in a single day.
+  readCacheMinutes: Number(process.env.READ_CACHE_MINUTES || 43200),
+  newTokenHours: Number(process.env.NEW_TOKEN_HOURS || 24),
+
+  // How many tokens per run may use the indexer, highest volume first.
+  //
+  // Blockscout's free tier is 100,000 credits a month and every call costs 20
+  // - so 5,000 calls a month, total. A full run asking about every token spent
+  // 1,000 of them, a fifth of the month, in one go.
+  //
+  // The gauge is volume-weighted, so this costs very little: tokens outside
+  // the top of the book move the seam by almost nothing, and they still get
+  // the RPC path, which reports "not measurable" rather than guessing. Between
+  // this and the long cache, steady-state spend is only what new arrivals cost.
+  indexerTokenLimit: Number(process.env.INDEXER_TOKEN_LIMIT || 100),
 
   // How many calls ride in one HTTP request, and the minimum gap between
   // requests. The public endpoint counts requests rather than the calls inside
