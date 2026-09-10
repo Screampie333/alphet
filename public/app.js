@@ -48,9 +48,9 @@
 
   var BANDS = [
     { key: "alpha-heavy", label: "Alpha-heavy", range: "65 – 100", color: "var(--alpha)", note: "Money is buying spread supply and locked liquidity." },
-    { key: "alpha-lean", label: "Alpha lean", range: "55 – 64", color: "#6f7fd4", note: "More money in quality than junk, but not by much." },
-    { key: "balanced", label: "Balanced", range: "45 – 54", color: "#b3a8bd", note: "Close to even. It comes down to what you buy." },
-    { key: "beta-lean", label: "Beta lean", range: "35 – 44", color: "#d1509f", note: "Money leaning to concentrated supply, pullable liquidity." },
+    { key: "alpha-lean", label: "Alpha lean", range: "55 – 64", color: "#dcff4d", note: "More money in quality than junk, but not by much." },
+    { key: "balanced", label: "Balanced", range: "45 – 54", color: "#e9ff99", note: "Close to even. It comes down to what you buy." },
+    { key: "beta-lean", label: "Beta lean", range: "35 – 44", color: "#f4ffd1", note: "Money leaning to concentrated supply, pullable liquidity." },
     { key: "beta-heavy", label: "Beta-heavy", range: "0 – 34", color: "var(--beta)", note: "Almost everything moving is on the Beta side." },
   ];
 
@@ -575,7 +575,7 @@
     var wrap = el("div", "token-logo");
 
     var monogram = el("span", "token-monogram", (token.symbol || "?").slice(0, 2).toUpperCase());
-    var tint = token.side === "alpha" ? "91, 155, 255" : "245, 48, 156";
+    var tint = token.side === "alpha" ? "204, 255, 0" : "255, 255, 255";
 
     // Tinted in its own side's colour, at a depth fixed by the address. Three
     // in ten RHC tokens have no logo on file at all, so this has to read as a

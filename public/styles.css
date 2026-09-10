@@ -1,40 +1,46 @@
 /* ============================================================
    Alphet — memecoin quality gauge
-   Two colours carry the whole product: navy is Alpha, magenta is Beta.
-   Nothing else on the page is allowed to use either of them, so wherever
-   you see one you are looking at a side of the split.
+   Two colours carry the whole product: Robinhood Chain's lime is Alpha,
+   white is Beta. Nothing else on the page is allowed to use either of
+   them, so wherever you see one you are looking at a side of the split.
 
-   A third, --rhc, is Robinhood Chain's own lime, and it is never a side.
-   It marks the ground rather than the verdict: the chain's name, the live
-   link to it, and addresses on it. Keeping it off the split is what lets
-   it sit on the same page without competing - a token is Alpha or Beta,
-   and all of them are on Robinhood Chain.
+   Alpha wearing the chain's own brand hex is the point: Alphet launches on
+   Robinhood Chain, so the good side wears the chain's colour and the junk
+   side wears none at all.
+
+   ONE TRAP TO KNOW BEFORE EDITING. Both sides are now light against a
+   near-black page, so anything whose job is to SEPARATE them - the seam
+   line, the gauge ticks - has to be dark. A cream divider between lime and
+   white is invisible on the white half, which is exactly the half where
+   the seam matters most.
    ============================================================ */
 
 :root {
-  /* Straight off the logo: the navy and the magenta either side of its seam,
-     plus the cream the seam itself is drawn in. --alpha is a lifted version of
-     the navy, because the logo navy is too dark to read as text on this
-     background - the deep one is kept for fills. */
-  --alpha: #5b9bff;
-  --alpha-mid: #2c4a8a;
-  --alpha-deep: #16264d;
-  --alpha-glow: rgba(91, 155, 255, 0.35);
-
-  --beta: #f5309c;
-  --beta-mid: #d21f80;
-  --beta-deep: #7d1050;
-  --beta-glow: rgba(245, 48, 156, 0.32);
-
-  /* Robinhood Chain's brand lime. On this near-black ground it is the
-     brightest thing available, which is why it is rationed: the chain's
-     name, the feed dot, a copied address, and a wash at the foot of the
-     page. Anywhere it appears, it is pointing at the chain. */
+  /* Robinhood Chain's brand lime, and the single source of Alpha's colour.
+     Kept under its own name because it also marks the chain itself - the
+     headline, the feed dot, a copied address - and those are the chain
+     speaking rather than a verdict. Same hex either way. */
   --rhc: #ccff00;
-  --rhc-glow: rgba(204, 255, 0, 0.22);
-  --rhc-soft: rgba(204, 255, 0, 0.12);
 
-  --tan: #b39371;
+  --alpha: var(--rhc);
+  --alpha-mid: #a8d400;
+  --alpha-deep: #4c6100;
+  --alpha-glow: rgba(204, 255, 0, 0.30);
+  --alpha-soft: rgba(204, 255, 0, 0.13);
+
+  /* Beta is plain white, and the plainness is the message: the junk side is
+     the side with no colour on it. --beta-deep is what the fills fade into,
+     because a solid white bar on a black page is a flashbang. */
+  --beta: #ffffff;
+  --beta-mid: #b6b2c0;
+  --beta-deep: #46424f;
+  --beta-glow: rgba(255, 255, 255, 0.22);
+  --beta-soft: rgba(255, 255, 255, 0.10);
+
+  /* The only hue outside the split, and only ever for danger. It has to
+     exist now: with Beta white, "bad" no longer looks like a warning by
+     itself, so a honeypot flag needs its own voice. */
+  --warn: #ff5c72;
 
   --bg: #0b0809;
   --panel: #14111a;
@@ -64,8 +70,7 @@ body {
 }
 
 /* A faint wash of both sides behind everything, so the page itself reads as
-   the same split the gauge does - with the chain's lime rising off the
-   bottom edge, under both of them. */
+   the same split the gauge does. */
 body::before {
   content: "";
   position: fixed;
@@ -73,17 +78,16 @@ body::before {
   pointer-events: none;
   z-index: 0;
   background:
-    radial-gradient(60vw 50vh at 12% -8%, rgba(91, 155, 255, 0.13), transparent 65%),
-    radial-gradient(55vw 45vh at 95% 4%, rgba(245, 48, 156, 0.10), transparent 62%),
-    radial-gradient(80vw 38vh at 50% 106%, rgba(204, 255, 0, 0.055), transparent 60%);
+    radial-gradient(60vw 50vh at 12% -8%, rgba(204, 255, 0, 0.10), transparent 65%),
+    radial-gradient(55vw 45vh at 95% 4%, rgba(255, 255, 255, 0.055), transparent 62%);
 }
 
 a { color: inherit; text-decoration: none; }
 
 /* The page had no focus ring at all, which made the sidebar and the pager
-   unusable by keyboard. The chain's lime is the one colour here bright
-   enough to be unmissable against every panel without meaning Alpha or
-   Beta, so it does the job. */
+   unusable by keyboard. The lime does the job because it is the brightest
+   thing on the page - here it is chrome rather than a verdict, which is
+   why it is written as --rhc and not --alpha. */
 :focus-visible {
   outline: 2px solid var(--rhc);
   outline-offset: 2px;
@@ -203,7 +207,7 @@ h1, h2, h3 { margin: 0; line-height: 1.15; letter-spacing: -0.02em; }
 .nav-item .ext { width: 12px; height: 12px; margin-left: auto; opacity: 0.5; }
 .nav-item .x-mark { width: 14px; height: 14px; }
 .nav-item:hover { background: var(--panel); color: var(--ink); }
-.nav-item.active { background: rgba(91, 155, 255, 0.12); color: var(--alpha); }
+.nav-item.active { background: var(--alpha-soft); color: var(--alpha); }
 
 .ca-btn {
   display: flex;
@@ -228,7 +232,7 @@ h1, h2, h3 { margin: 0; line-height: 1.15; letter-spacing: -0.02em; }
 
 .status { display: flex; align-items: center; gap: 8px; padding: 0 8px; font-size: 13px; color: var(--muted); }
 .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--dim); flex: none; }
-.dot.live { background: var(--rhc); box-shadow: 0 0 0 3px var(--rhc-soft); }
+.dot.live { background: var(--rhc); box-shadow: 0 0 0 3px var(--alpha-soft); }
 
 .btn-cta {
   display: flex;
@@ -240,7 +244,7 @@ h1, h2, h3 { margin: 0; line-height: 1.15; letter-spacing: -0.02em; }
   border: 0;
   border-radius: 10px;
   background: linear-gradient(100deg, var(--alpha), var(--beta));
-  color: #fff;
+  color: var(--bg);
   font-family: inherit;
   font-size: 14px;
   font-weight: 700;
@@ -262,12 +266,10 @@ h1 {
   font-weight: 700;
   max-width: 20ch;
 }
-/* The chain's name, in the chain's colour. This used to be an Alpha-to-Beta
-   gradient, which read as a pun on the split but spent the two colours on a
-   phrase that is neither. */
+/* The chain's name, in the chain's colour. */
 .hl {
   color: var(--rhc);
-  text-shadow: 0 0 42px var(--rhc-glow);
+  text-shadow: 0 0 42px var(--alpha-glow);
 }
 
 .lede { color: var(--muted); font-size: 16px; max-width: 62ch; margin: 16px 0 0; }
@@ -329,7 +331,7 @@ h1 {
 }
 .gauge-alpha {
   width: 50%;
-  background: linear-gradient(180deg, var(--alpha-mid), var(--alpha-deep));
+  background: linear-gradient(180deg, var(--alpha), var(--alpha-deep));
   border-radius: 12px 0 0 12px;
   box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.32);
 }
@@ -346,7 +348,7 @@ h1 {
   top: 0;
   bottom: 0;
   width: 1px;
-  background: rgba(255, 255, 255, 0.22);
+  background: rgba(0, 0, 0, 0.30);
 }
 .gauge-tick span {
   position: absolute;
@@ -367,15 +369,19 @@ h1 {
   transition: left 900ms cubic-bezier(0.22, 1, 0.36, 1);
   z-index: 2;
 }
+/* Dark core, pale edge. The seam crosses three different grounds - lime,
+   white, and the page above and below the bar - and no single flat colour
+   reads on all three. The ring carries it over the dark page; the dark core
+   carries it over both halves of the gauge. */
 .seam-line {
   position: absolute;
   top: -10px;
   bottom: -10px;
   left: -1.5px;
   width: 3px;
-  background: var(--ink);
+  background: var(--bg);
   border-radius: 2px;
-  box-shadow: 0 0 18px rgba(255, 255, 255, 0.45);
+  box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.5), 0 0 18px rgba(0, 0, 0, 0.55);
 }
 .seam-badge {
   position: absolute;
@@ -478,7 +484,7 @@ h1 {
 /* Vertical mirror of the gauge: Alpha fills from the top, Beta from the
    bottom, so a column and the seam above it read the same way round. */
 .trend-alpha { background: linear-gradient(180deg, var(--alpha-mid), var(--alpha-deep)); }
-.trend-beta { background: linear-gradient(180deg, var(--beta-deep), var(--beta)); flex: 1; }
+.trend-beta { background: linear-gradient(180deg, var(--beta-deep), var(--beta-mid)); flex: 1; }
 .trend-time { font-family: var(--mono); font-size: 9.5px; color: var(--dim); }
 .trend-empty { padding: 22px 16px; color: var(--dim); font-size: 13px; }
 
@@ -562,8 +568,8 @@ h1 {
 .row-meter { width: 120px; height: 5px; border-radius: 3px; background: var(--panel-2); overflow: hidden; flex: none; }
 .row-value { width: 46px; text-align: right; font-family: var(--mono); font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .row-change { width: 74px; text-align: right; font-family: var(--mono); font-size: 12px; }
-.up { color: #35d07f; }
-.down { color: #ff5c72; }
+.up { color: var(--alpha); }
+.down { color: var(--warn); }
 .flat { color: var(--dim); }
 
 .tf-note { padding: 12px 16px; color: var(--dim); font-size: 12px; }
@@ -612,8 +618,8 @@ h1 {
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
-.pill-alpha { background: rgba(91, 155, 255, 0.16); color: var(--alpha); }
-.pill-beta { background: rgba(245, 48, 156, 0.15); color: var(--beta); }
+.pill-alpha { background: var(--alpha-soft); color: var(--alpha); }
+.pill-beta { background: var(--beta-soft); color: var(--beta); }
 
 .token-name { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .token-sym { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -651,7 +657,7 @@ h1 {
   background: var(--panel-2);
 }
 .token-num { font-family: var(--mono); font-variant-numeric: tabular-nums; text-align: right; }
-.token-flag { color: var(--beta); font-size: 11px; font-weight: 700; }
+.token-flag { color: var(--warn); font-size: 11px; font-weight: 700; }
 .token-empty { padding: 26px 16px; color: var(--dim); font-size: 13px; }
 
 /* ============================================================
@@ -666,8 +672,8 @@ h1 {
   padding: 22px;
   background: var(--panel);
 }
-.vs-alpha { border-top: 3px solid var(--alpha); background: linear-gradient(180deg, rgba(91, 155, 255, 0.09), var(--panel) 45%); }
-.vs-beta { border-top: 3px solid var(--beta); background: linear-gradient(180deg, rgba(245, 48, 156, 0.09), var(--panel) 45%); }
+.vs-alpha { border-top: 3px solid var(--alpha); background: linear-gradient(180deg, rgba(204, 255, 0, 0.08), var(--panel) 45%); }
+.vs-beta { border-top: 3px solid var(--beta); background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), var(--panel) 45%); }
 
 .vs-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
 .vs-tag { font-family: "Bungee", sans-serif; font-size: 15px; letter-spacing: 0.1em; }
@@ -695,7 +701,7 @@ h1 {
   padding: 40px 32px;
   border-radius: 18px;
   text-align: center;
-  background: linear-gradient(100deg, rgba(91, 155, 255, 0.16), rgba(245, 48, 156, 0.16));
+  background: linear-gradient(100deg, rgba(204, 255, 0, 0.13), rgba(255, 255, 255, 0.07));
   border: 1px solid var(--line);
 }
 .cta h2 { font-size: clamp(20px, 2.6vw, 28px); font-weight: 700; }
@@ -797,8 +803,8 @@ h1 {
 .token-warn {
   padding: 11px 16px;
   border-bottom: 1px solid var(--line);
-  background: rgba(245, 48, 156, 0.07);
-  border-left: 3px solid var(--beta);
+  background: rgba(255, 92, 114, 0.07);
+  border-left: 3px solid var(--warn);
   color: var(--muted);
   font-size: 12.5px;
   line-height: 1.5;
@@ -905,5 +911,5 @@ h1 {
 .token-ca-icon { opacity: 0.55; font-size: 10px; }
 .token-ca:hover .token-ca-icon { opacity: 1; }
 
-.token-ca.copied { color: var(--rhc); background: var(--rhc-soft); padding-left: 5px; }
+.token-ca.copied { color: var(--rhc); background: var(--alpha-soft); padding-left: 5px; }
 .token-ca.copied .token-ca-icon { opacity: 0; }

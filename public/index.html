@@ -294,9 +294,12 @@
 </main>
 
 <!-- ============================================================
-     SHARED SVG: the Alphet mark — a heart split down a wavy seam, navy on
-     the Alpha side and magenta on the Beta side. The logo is the product:
-     it is the same split the gauge draws, at badge size.
+     SHARED SVG: the Alphet mark — a heart split down a wavy seam, the
+     chain's lime on the Alpha side and white on the Beta side. The logo is
+     the product: it is the same split the gauge draws, at badge size.
+
+     Both halves are light now, so every line that has to read against them
+     - the seam, the brows, the scrollwork - is drawn in near-black.
 
      Two variants, because detail that reads at 42px is mush at 24px:
        #alphet-mark         heart + seam only, for the sidebar and tab bar
@@ -323,27 +326,27 @@
   </defs>
 
   <g id="alphet-mark">
-    <use href="#alphet-heart" fill="#1f3159"/>
+    <use href="#alphet-heart" fill="#ccff00"/>
     <g clip-path="url(#alphet-heart-clip)">
-      <use href="#alphet-beta-half" fill="#f5309c"/>
-      <use href="#alphet-seam" fill="none" stroke="#f6efe4" stroke-width="3"/>
+      <use href="#alphet-beta-half" fill="#ffffff"/>
+      <use href="#alphet-seam" fill="none" stroke="#0b0809" stroke-width="3"/>
     </g>
   </g>
 
   <g id="alphet-mark-detail">
-    <use href="#alphet-heart" fill="#1f3159"/>
+    <use href="#alphet-heart" fill="#ccff00"/>
     <g clip-path="url(#alphet-heart-clip)">
-      <use href="#alphet-beta-half" fill="#f5309c"/>
+      <use href="#alphet-beta-half" fill="#ffffff"/>
       <!-- the shaded lower lobe on the Beta side -->
-      <path d="M58 52 C 55 67, 44 74, 51 94 L 102 94 L 102 56 Z" fill="#c9247e" opacity="0.5"/>
+      <path d="M58 52 C 55 67, 44 74, 51 94 L 102 94 L 102 56 Z" fill="#b6b2c0" opacity="0.5"/>
 
       <!-- Alpha side: three brow strokes over a plain open eye -->
-      <g stroke="#b39371" stroke-width="2.3" fill="none" stroke-linecap="round">
+      <g stroke="#12121a" stroke-width="2.3" fill="none" stroke-linecap="round">
         <path d="M14 23 Q 29 15, 44 22"/>
         <path d="M10 34 Q 27 26, 45 33"/>
         <path d="M10 46 Q 27 54, 44 47"/>
       </g>
-      <circle cx="28" cy="38" r="4.4" fill="#f6efe4"/>
+      <circle cx="28" cy="38" r="4.4" fill="#ffffff"/>
       <circle cx="29" cy="38.4" r="1.9" fill="#12121a"/>
 
       <!-- Beta side: scrollwork over a cut-gem eye -->
@@ -355,9 +358,9 @@
         <path d="M73 47 C 74 58, 66 63, 63 71 C 60 79, 66 84, 71 80"/>
       </g>
       <path d="M72 33 L78 38 L75 46 L68 46 L65 38 Z"
-            fill="#f6efe4" stroke="#12121a" stroke-width="1.7" stroke-linejoin="round"/>
+            fill="#d6d2de" stroke="#12121a" stroke-width="1.7" stroke-linejoin="round"/>
 
-      <use href="#alphet-seam" fill="none" stroke="#f6efe4" stroke-width="2.6"/>
+      <use href="#alphet-seam" fill="none" stroke="#0b0809" stroke-width="2.6"/>
     </g>
   </g>
 </svg>
