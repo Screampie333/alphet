@@ -1,7 +1,7 @@
 // history.js
 // Prints every snapshot you've saved so far, oldest first.
-// Useful for checking whether your thresholds are sensible - if every
-// single day says "Cloudy", your cutoffs in config.js need adjusting.
+// Useful for checking whether alphaCutoff is sensible - if every run says
+// "Balanced", the cutoff in config.js is doing no work.
 
 import { config } from "./config.js";
 import { readAll } from "./storage.js";
@@ -14,8 +14,8 @@ if (!all.length) {
 }
 
 console.log(`\n  ${all.length} snapshot(s)\n`);
-console.log("  date                      index   condition");
-console.log("  ------------------------------------------------");
+console.log("  date                   alpha    beta   index   verdict");
+console.log("  ---------------------------------------------------------------");
 
 for (const s of all) {
   // Shown in the same zone as the dashboard rather than UTC, so a row here
@@ -25,19 +25,22 @@ for (const s of all) {
     dateStyle: "short",
     timeStyle: "short",
   });
-  const index = String(s.index).padStart(3, " ");
-  console.log(`  ${date}      ${index}     ${s.condition.label}`);
+
+  const alpha = s.alphaWeight === null ? "  -  " : `${s.alphaWeight.toFixed(1)}%`.padStart(6);
+  const beta = s.betaWeight === null ? "  -  " : `${s.betaWeight.toFixed(1)}%`.padStart(6);
+  const index = String(s.alphetIndex ?? "-").padStart(5);
+
+  console.log(`  ${date}   ${alpha}  ${beta}   ${index}   ${s.verdict.label}`);
 }
 
-// Count how often each condition showed up.
 const counts = {};
 for (const s of all) {
-  counts[s.condition.label] = (counts[s.condition.label] || 0) + 1;
+  counts[s.verdict.label] = (counts[s.verdict.label] || 0) + 1;
 }
 
 console.log("\n  distribution");
 for (const [label, n] of Object.entries(counts)) {
   const pct = Math.round((n / all.length) * 100);
-  console.log(`    ${label.padEnd(10)} ${String(n).padStart(3)}  (${pct}%)`);
+  console.log(`    ${label.padEnd(14)} ${String(n).padStart(3)}  (${pct}%)`);
 }
 console.log("");

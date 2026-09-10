@@ -4,3 +4,9 @@ node_modules/
 
 # design reference only (Wayback Machine archive dump, not project source)
 referensi/
+public/api/
+data/snapshots-mock.json
+data/chain-cache.json
+
+# old Haboob archives - kept locally, not published
+backup/

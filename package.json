@@ -1,7 +1,7 @@
 {
-  "name": "haboob-indexer",
+  "name": "alphet",
   "version": "0.1.0",
-  "description": "Indexer and scoring engine for Haboob - a pump.fun market weather report",
+  "description": "Quality gauge for memecoins on Robinhood Chain - splits every launch into Alpha and Beta and shows where the money went",
   "type": "module",
   "main": "src/run.js",
   "scripts": {
@@ -9,8 +9,9 @@
     "once": "node src/run.js --once",
     "mock": "node src/run.js --once --mock",
     "history": "node src/history.js",
+    "backfill": "node src/backfill.js",
     "web": "node src/server.js",
-    "compare": "node src/compare.js"
+    "publish": "node -e \"import('./src/publish.js').then(m=>{const r=m.publish();console.log(r.files+' files, '+r.kb+' KB written to public/api/')})\""
   },
   "engines": {
     "node": ">=18"

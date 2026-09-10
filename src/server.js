@@ -1,11 +1,11 @@
 // server.js
-// A tiny web server for the Haboob landing page - zero dependencies, just
-// Node's built-in http module.
+// A static file server for public/ - zero dependencies, just Node's built-in
+// http module.
 //
-// Two jobs:
-//   1. Serve everything in public/ as static files (the landing page).
-//   2. Serve GET /api/latest - the most recent snapshot as JSON, so the
-//      page can show real numbers instead of the design-demo ones.
+// It has no API routes because there is no API: the collector writes
+// public/api/*.json after every run (see publish.js), so this serves exactly
+// the same bytes Cloudflare Pages does. That is the point - local and
+// deployed cannot drift apart if they are reading the same files.
 //
 //   npm run web   -> starts this on http://localhost:3000 (or PORT from .env)
 
@@ -13,9 +13,6 @@ import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
 import { config, ROOT } from "./config.js";
-import { latest, recent } from "./storage.js";
-import { rollupAll, WINDOWS } from "./rollup.js";
-import { countWindows } from "./windows.js";
 
 const PUBLIC_DIR = path.join(ROOT, "public");
 
@@ -29,104 +26,6 @@ const CONTENT_TYPES = {
   ".jpg": "image/jpeg",
   ".ico": "image/x-icon",
 };
-
-function serveLatestSnapshot(res) {
-  // No snapshot yet is a normal state (e.g. before the first `npm run once`),
-  // not an error - the page is expected to handle `snapshot: null` itself.
-  const snapshot = latest();
-  res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
-  res.end(JSON.stringify({ snapshot }));
-}
-
-// The weather view needs a series, not just the newest reading - the
-// hourly strip and the daily rows are both drawn from this.
-function serveHistory(res, requestUrl) {
-  const params = new URL(requestUrl, "http://localhost").searchParams;
-  const days = Math.min(Math.max(Number(params.get("days")) || 7, 1), 30);
-
-  // Cap the payload: at 48 snapshots/day, a month of history is a lot of JSON
-  // to push at a page that only draws the tail of it.
-  const snapshots = recent(days).slice(-400);
-
-  res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
-  res.end(JSON.stringify({ snapshots }));
-}
-
-// Creation and graduation counts come straight off the chain (see windows.js),
-// which takes about a minute of paging - far too slow to do per request. One
-// cached result is shared by every visitor and refreshed in the background.
-const WINDOW_CACHE_MS = 5 * 60 * 1000;
-let windowCache = { at: 0, data: null, error: null, inFlight: null };
-
-function refreshWindowCounts() {
-  if (windowCache.inFlight) return windowCache.inFlight;
-
-  windowCache.inFlight = countWindows(WINDOWS)
-    .then((data) => {
-      windowCache = { at: Date.now(), data, error: null, inFlight: null };
-      return data;
-    })
-    .catch((err) => {
-      // Keep serving the last good numbers if we have them - a page showing
-      // slightly stale counts beats a page showing none.
-      windowCache = {
-        at: Date.now(),
-        data: windowCache.data,
-        error: err.message,
-        inFlight: null,
-      };
-      return null;
-    });
-
-  return windowCache.inFlight;
-}
-
-// Every timeframe in one response, so switching between 5m / 1h / 6h / 24h on
-// the page is instant instead of a fresh request each time.
-//
-// Two sources are merged here:
-//   - created / graduated / graduation rate: counted live off the chain, so
-//     they are exact from the very first request with no stored history
-//   - volume / volatility / rug rate: rolled up from stored snapshots, which
-//     do need the collector to have been running
-async function serveRollups(res) {
-  const rolled = rollupAll(recent(3));
-
-  const stale = Date.now() - windowCache.at > WINDOW_CACHE_MS;
-  if (stale || !windowCache.data) {
-    // First request pays for the fetch; later ones ride the cache. If it
-    // fails, the snapshot-based numbers below still render.
-    await refreshWindowCounts();
-  }
-
-  const counts = windowCache.data;
-  if (counts) {
-    for (const win of rolled.windows) {
-      const live = counts.windows[win.key];
-      if (!live) continue;
-
-      win.live = {
-        created: live.created,
-        graduated: live.graduated,
-        graduationRate: live.graduationRate,
-        previous: live.previous,
-        measuredAt: counts.measuredAt,
-      };
-      // Chain counts don't depend on the collector, so a window with no
-      // snapshots behind it still has real numbers to show.
-      win.available = true;
-    }
-  }
-
-  res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
-  res.end(
-    JSON.stringify({
-      ...rolled,
-      liveCounts: Boolean(counts),
-      liveCountsError: windowCache.error,
-    })
-  );
-}
 
 function serveStatic(req, res) {
   const requestedPath = decodeURIComponent(req.url.split("?")[0]);
@@ -153,52 +52,9 @@ function serveStatic(req, res) {
   });
 }
 
-const server = http.createServer((req, res) => {
-  const route = req.url.split("?")[0];
-
-  if (req.method === "GET" && route === "/api/latest") {
-    serveLatestSnapshot(res);
-    return;
-  }
-
-  if (req.method === "GET" && route === "/api/history") {
-    serveHistory(res, req.url);
-    return;
-  }
-
-  if (req.method === "GET" && route === "/api/rollups") {
-    serveRollups(res).catch(() => {
-      res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
-      res.end(JSON.stringify({ error: "rollup failed" }));
-    });
-    return;
-  }
-  serveStatic(req, res);
-});
+const server = http.createServer(serveStatic);
 
 server.listen(config.port, () => {
-  console.log(`\n  Haboob web server running at http://localhost:${config.port}\n`);
-
-  // Paging the chain for window counts takes about a minute, so warm the
-  // cache now rather than making the first visitor wait for it. Refreshed on
-  // a timer afterwards so it never goes stale enough to matter.
-  if (config.heliusApiKey) {
-    console.log("  warming on-chain window counts (~1 min)...");
-    refreshWindowCounts().then((data) => {
-      if (data) {
-        const day = data.windows["24h"];
-        console.log(
-          `  ready: ${day.created.toLocaleString()} created / ${day.graduated.toLocaleString()} graduated in 24h ` +
-            `(${day.graduationRate.toFixed(2)}% graduation rate)\n`
-        );
-      } else {
-        console.log(`  window counts unavailable: ${windowCache.error}\n`);
-      }
-    });
-
-    const timer = setInterval(refreshWindowCounts, WINDOW_CACHE_MS);
-    timer.unref?.(); // don't hold the process open on its own account
-  } else {
-    console.log("  no HELIUS_API_KEY - window counts will fall back to stored snapshots\n");
-  }
+  console.log(`\n  Alphet web server running at http://localhost:${config.port}`);
+  console.log(`  chain: ${config.chainName} (id ${config.chainId})   |   discovery: GeckoTerminal /${config.network}\n`);
 });

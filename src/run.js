@@ -1,65 +1,55 @@
 // run.js
 // The main entry point. This is the file you actually run.
 //
-//   npm run mock     -> one run with fake data (works with no API key)
-//   npm run once     -> one run with live data
+//   npm run mock     -> one run with fake data (works with no RPC endpoint)
+//   npm run once     -> one run against Robinhood Chain
 //   npm start        -> keeps running forever, every INTERVAL_MINUTES
 
 import { config } from "./config.js";
-import { collect, apiCalls } from "./collector.js";
-import { windowCalls } from "./windows.js";
+import { collect, rpcCalls, apiCalls, indexerCalls, imageCalls } from "./collector.js";
 import { score } from "./scoring.js";
 import { append, recent } from "./storage.js";
+import { publish } from "./publish.js";
 import { consoleReport, xPostReport } from "./report.js";
 
 const args = process.argv.slice(2);
 const runOnce = args.includes("--once");
 const useMock = args.includes("--mock");
 
-// Helius free tier is 1M credits/month, which is about this many per day.
-const FREE_TIER_DAILY = 33000;
-
 async function tick() {
   try {
     console.log(`\n[${new Date().toISOString()}] collecting...`);
 
-    // 1. get the raw numbers
     const raw = await collect({ mock: useMock });
-
-    // 2. look at our own recent history to use as a baseline
     const history = recent(7);
-
-    // 3. score it
     const snapshot = score(raw, history);
-
-    // 4. save it
     const total = append(snapshot);
+    const published = publish();
 
-    // 5. show it
     console.log(consoleReport(snapshot));
     console.log("  --- X post version ---\n");
     console.log(xPostReport(snapshot));
-    console.log(`\n  saved. ${total} snapshot(s) on file.`);
+    console.log(
+      `\n  saved. ${total} snapshot(s) on file, ` +
+        `${published.kb} KB of API written to public/api/.`
+    );
 
-    // Quota is the real constraint on this project, so every run reports what
-    // it cost and what that works out to per day. Reported rather than
-    // estimated: pump.fun's traffic doubled inside one afternoon, and every
-    // figure worked out on paper went stale with it.
+    // Three budgets now, and they bind differently. GeckoTerminal is capped
+    // per minute and a run spends under sixty. Blockscout is generous enough
+    // that a run barely touches its daily credits. The RPC side is the one to
+    // watch before raising MAX_TOKENS_PER_RUN - reported, never estimated.
     if (!useMock) {
-      const used = apiCalls.total + windowCalls.count;
-      const perDay = Math.round(used * (1440 / config.intervalMinutes));
-      const share = Math.round((perDay / FREE_TIER_DAILY) * 100);
-      const warn = share > 85 ? " - too close, raise INTERVAL_MINUTES or lower SAMPLE_SECONDS" : "";
-
+      const perDay = Math.round(rpcCalls.count * (1440 / config.intervalMinutes));
       console.log(
-        `  cost: ${used} call(s) this run ` +
-          `(${apiCalls.rpc} paging, ${apiCalls.parse} parse, ${windowCalls.count} window) ` +
-          `-> ~${perDay.toLocaleString()}/day, ${share}% of the free tier${warn}\n`
+        `  cost: ${apiCalls.count} GeckoTerminal + ${indexerCalls.count} Blockscout + ${imageCalls.count} DexScreener + ` +
+          `${rpcCalls.count.toLocaleString("en-US")} RPC call(s) in ${rpcCalls.batches} batch(es) ` +
+          `-> ~${perDay.toLocaleString("en-US")} RPC/day\n`
       );
-
-      apiCalls.rpc = 0;
-      apiCalls.parse = 0;
-      windowCalls.count = 0;
+      rpcCalls.count = 0;
+      rpcCalls.batches = 0;
+      apiCalls.count = 0;
+      indexerCalls.count = 0;
+      imageCalls.count = 0;
     } else {
       console.log("");
     }
@@ -73,9 +63,13 @@ async function tick() {
 }
 
 async function main() {
-  if (!useMock && !config.heliusApiKey) {
-    console.log("\n  No HELIUS_API_KEY found in .env");
-    console.log("  Running with --mock instead so you can see it work.\n");
+  // Said once, at the top, because the difference it makes is not visible in
+  // the reading itself - a run without it prints a confident gauge built on
+  // two of four metrics.
+  if (!useMock && !config.blockscoutKey) {
+    console.log("\n  No BLOCKSCOUT_API_KEY set.");
+    console.log("  Holder distribution and developer track record will be mostly unmeasurable.");
+    console.log("  Free key: https://dev.blockscout.com");
   }
 
   await tick();

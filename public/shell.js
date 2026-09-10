@@ -1,13 +1,13 @@
 // shell.js
-// The bits every Haboob page shares: the mobile drawer, the copy-address
+// The bits every Alphet page shares: the mobile drawer, the copy-address
 // button, and the scrollspy that lights up whichever nav item matches the
 // section you're looking at.
 //
 // Loaded before each page's own script, which then calls these. Plain script,
 // not a module, so the pages still work when opened straight off disk.
 
-window.HaboobShell = (function () {
-  // Paste the real contract address here once it exists. One place, both pages.
+window.AlphetShell = (function () {
+  // Paste the real contract address here once it exists. One place, every page.
   const CONTRACT_ADDRESS = "";
 
   function initDrawer() {

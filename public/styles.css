@@ -1,432 +1,891 @@
-/* Haboob — dashboard shell.
-   The layout is modelled on a fixed-sidebar app shell; the palette, type and
-   mascot stay Haboob's own (dark desert + sand/rust, Bungee display face). */
-
-:root{
-  /* surfaces */
-  --bg:#1c130d;
-  --bg-alt:#241811;
-  --bg-sidebar:#140d08;
-  --card:rgba(251,241,226,0.045);
-  --card-hover:rgba(251,241,226,0.075);
-  --border:rgba(251,241,226,0.12);
-  --border-soft:rgba(251,241,226,0.07);
-
-  /* brand */
-  --sand:#d9a066;
-  --rust:#c97a3e;
-  --cream:#e8b87a;
-  --ink:#120d09;
-  --yellow:#ffe01a;
-  --magenta:#ff2fb9;
-  --blue:#3ba9f5;
-
-  /* text */
-  --text:#fbf1e2;
-  --text-muted:#c9ad8c;
-  --text-dim:#8d7458;
-
-  /* accent follows the current weather condition */
-  --accent:#e8b87a;
-
-  --font-display:'Bungee',cursive,'Segoe UI',sans-serif;
-  --font-body:'Space Grotesk','Segoe UI',system-ui,sans-serif;
-  --font-mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
-
-  --sidebar-w:280px;
-  --topbar-h:64px;
-}
-
-*{box-sizing:border-box;margin:0;padding:0;}
-html{scroll-behavior:smooth;}
-body{
-  background:var(--bg);
-  color:var(--text);
-  font-family:var(--font-body);
-  font-size:15px;
-  line-height:1.6;
-  -webkit-font-smoothing:antialiased;
-  min-height:100vh;
-}
-img,svg{max-width:100%;}
-a{color:inherit;text-decoration:none;}
-::selection{background:rgba(217,160,102,0.3);}
-
 /* ============================================================
-   SIDEBAR
+   Alphet — memecoin quality gauge
+   Two colours carry the whole product: navy is Alpha, magenta is Beta.
+   Nothing else on the page is allowed to use either of them, so wherever
+   you see one you are looking at a side of the split.
    ============================================================ */
-.sidebar{
-  position:fixed;
-  inset:0 auto 0 0;
-  width:var(--sidebar-w);
-  z-index:50;
-  display:flex;
-  flex-direction:column;
-  background:var(--bg-sidebar);
-  border-right:1px solid var(--border-soft);
-  transition:transform .3s cubic-bezier(.4,0,.2,1);
-}
-.sidebar-head{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:12px;
-  padding:20px;
-  border-bottom:1px solid var(--border-soft);
-}
-.brand{display:flex;align-items:center;gap:11px;}
-.brand-mark{width:38px;height:38px;flex-shrink:0;}
-.brand-name{
-  font-family:var(--font-display);
-  font-size:19px;
-  letter-spacing:0.5px;
-  line-height:1;
-}
-.brand-name small{
-  display:block;
-  font-family:var(--font-body);
-  font-size:10px;
-  font-weight:500;
-  letter-spacing:0.14em;
-  text-transform:uppercase;
-  color:var(--text-dim);
-  margin-top:5px;
+
+:root {
+  /* Straight off the logo: the navy and the magenta either side of its seam,
+     plus the cream the seam itself is drawn in. --alpha is a lifted version of
+     the navy, because the logo navy is too dark to read as text on this
+     background - the deep one is kept for fills. */
+  --alpha: #5b9bff;
+  --alpha-mid: #2c4a8a;
+  --alpha-deep: #16264d;
+  --alpha-glow: rgba(91, 155, 255, 0.35);
+
+  --beta: #f5309c;
+  --beta-mid: #d21f80;
+  --beta-deep: #7d1050;
+  --beta-glow: rgba(245, 48, 156, 0.32);
+
+  --tan: #b39371;
+
+  --bg: #0b0809;
+  --panel: #14111a;
+  --panel-2: #1b1722;
+  --line: #2a2533;
+  --ink: #f4ece1;
+  --muted: #9a92a4;
+  --dim: #6c657a;
+
+  --sidebar-w: 264px;
+  --radius: 14px;
+  --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
-.sidebar-body{
-  flex:1;
-  overflow-y:auto;
-  overflow-x:hidden;
-  padding-bottom:8px;
-  scrollbar-width:thin;
-  scrollbar-color:rgba(251,241,226,0.14) transparent;
-}
-.sidebar-body::-webkit-scrollbar{width:8px;}
-.sidebar-body::-webkit-scrollbar-track{background:rgba(251,241,226,0.03);}
-.sidebar-body::-webkit-scrollbar-thumb{background:rgba(251,241,226,0.14);}
-.sidebar-body::-webkit-scrollbar-thumb:hover{background:rgba(251,241,226,0.24);}
+* { box-sizing: border-box; }
 
-.nav-group{padding:22px 20px 2px;}
-.nav-label{
-  font-size:11px;
-  font-weight:700;
-  letter-spacing:0.14em;
-  text-transform:uppercase;
-  color:var(--text-dim);
-  margin-bottom:10px;
-}
-.nav-item{
-  position:relative;
-  display:flex;
-  align-items:center;
-  gap:12px;
-  width:calc(100% + 40px);
-  margin:0 -20px;
-  padding:11px 20px;
-  font-family:inherit;
-  font-size:14.5px;
-  font-weight:500;
-  color:var(--text-muted);
-  background:none;
-  border:0;
-  text-align:left;
-  cursor:pointer;
-  transition:color .2s ease,background .2s ease;
-}
-.nav-item svg{width:19px;height:19px;flex-shrink:0;}
-/* The X mark is a solid glyph among outline icons, so it reads heavier at the
-   same size. A little smaller puts it back on the same optical weight. */
-.nav-item svg.x-mark{width:16px;height:16px;}
-.nav-item:hover{color:var(--text);background:rgba(251,241,226,0.045);}
-.nav-item.active{color:var(--text);background:rgba(217,160,102,0.1);}
-.nav-item.active::before{
-  content:"";
-  position:absolute;
-  left:0;top:0;bottom:0;
-  width:3px;
-  background:var(--sand);
-}
-.nav-item .ext{width:13px;height:13px;margin-left:auto;opacity:0.45;}
+html { scroll-behavior: smooth; }
 
-/* contract address block */
-.ca-btn{
-  display:flex;
-  align-items:center;
-  gap:12px;
-  width:calc(100% + 40px);
-  margin:0 -20px;
-  padding:11px 20px;
-  background:none;
-  border:0;
-  font-family:inherit;
-  color:var(--text-muted);
-  cursor:pointer;
-  text-align:left;
-  transition:background .2s ease;
-}
-.ca-btn:hover{background:rgba(251,241,226,0.045);}
-.ca-btn .ca-copy{width:16px;height:16px;flex-shrink:0;opacity:0.55;}
-.ca-text{flex:1;min-width:0;}
-.ca-label{display:block;font-size:11px;color:var(--text-dim);font-weight:500;margin-bottom:1px;}
-.ca-value{
-  display:block;
-  font-family:var(--font-mono);
-  font-size:13px;
-  color:var(--text);
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
-}
-.ca-value.copied{color:var(--sand);}
-
-/* live status */
-.status{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  margin:0 -20px;
-  padding:11px 20px;
-  font-size:13px;
-  color:var(--text-muted);
-}
-.dot{
-  width:8px;height:8px;border-radius:50%;
-  background:var(--text-dim);
-  flex-shrink:0;
-}
-.dot.live{background:var(--sand);animation:pulse 2.4s ease-out infinite;}
-@keyframes pulse{
-  0%{box-shadow:0 0 0 0 rgba(217,160,102,0.45);}
-  70%{box-shadow:0 0 0 9px rgba(217,160,102,0);}
-  100%{box-shadow:0 0 0 0 rgba(217,160,102,0);}
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Space Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 15px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
 }
 
-.sidebar-foot{padding:16px 20px;border-top:1px solid var(--border-soft);}
-.btn-cta{
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  gap:9px;
-  width:100%;
-  padding:13px 16px;
-  border:0;
-  border-radius:10px;
-  background:var(--sand);
-  color:var(--ink);
-  font-family:var(--font-body);
-  font-size:14.5px;
-  font-weight:700;
-  cursor:pointer;
-  transition:background .2s ease,transform .15s ease;
-}
-.btn-cta:hover{background:var(--cream);transform:translateY(-1px);}
-.btn-cta svg{width:18px;height:18px;transition:transform .2s ease;}
-.btn-cta:hover svg{transform:scale(1.12);}
-
-/* ============================================================
-   MOBILE TOP BAR
-   ============================================================ */
-.topbar{
-  display:none;
-  position:fixed;
-  top:0;left:0;right:0;
-  height:var(--topbar-h);
-  z-index:30;
-  align-items:center;
-  justify-content:space-between;
-  padding:0 16px;
-  background:var(--bg-sidebar);
-  border-bottom:1px solid var(--border-soft);
-}
-.icon-btn{
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  padding:8px;
-  background:none;
-  border:0;
-  color:var(--text-muted);
-  cursor:pointer;
-  transition:color .2s ease;
-}
-.icon-btn:hover{color:var(--text);}
-.icon-btn svg{width:22px;height:22px;}
-.backdrop{
-  display:none;
-  position:fixed;
-  inset:0;
-  z-index:40;
-  background:rgba(10,7,4,0.6);
-}
-.backdrop.open{display:block;}
-
-/* ============================================================
-   MAIN
-   ============================================================ */
-.main{
-  margin-left:var(--sidebar-w);
-  position:relative;
-  z-index:10;
-  min-height:100vh;
-  padding-bottom:150px;
-}
-/* Centred in the space left of the sidebar. Without the auto margins the
-   column hugs the sidebar and, on a wide screen, leaves a stripe of empty
-   ground down the right-hand side. */
-.page{max-width:1080px;margin-inline:auto;padding:0 40px;}
-.block{padding:54px 0;}
-.block + .block{border-top:1px solid var(--border-soft);}
-
-.hero{
-  padding:52px 0 46px;
+/* A faint wash of both sides behind everything, so the page itself reads as
+   the same split the gauge does. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
   background:
-    radial-gradient(ellipse 640px 380px at 82% -10%, rgba(201,122,62,0.28), transparent 62%),
-    radial-gradient(ellipse 520px 340px at 8% 115%, rgba(59,169,245,0.08), transparent 60%);
-}
-.eyebrow{
-  display:inline-block;
-  font-family:var(--font-display);
-  font-size:12.5px;
-  color:var(--yellow);
-  letter-spacing:0.5px;
-  padding:5px 12px;
-  border:2px solid var(--yellow);
-  transform:rotate(-1.5deg);
-  margin-bottom:18px;
-}
-h1{
-  font-family:var(--font-display);
-  font-size:clamp(30px,4vw,46px);
-  line-height:1.1;
-  margin-bottom:16px;
-  text-shadow:3px 3px 0 rgba(0,0,0,0.35);
-}
-h1 .hl{color:var(--sand);}
-.lede{color:var(--text-muted);max-width:54ch;font-size:16px;}
-
-.section-title{
-  font-family:var(--font-display);
-  font-size:clamp(20px,2.4vw,27px);
-  margin-bottom:10px;
-}
-.section-sub{color:var(--text-muted);max-width:60ch;margin-bottom:28px;font-size:14.5px;}
-
-/* The report card, signal cards and raw readout that used to live here
-   moved to weather.css when the report became a forecast-style view. */
-
-/* ---------- scale strip ---------- */
-.scale{display:grid;grid-template-columns:repeat(auto-fit,minmax(178px,1fr));gap:12px;}
-.scale-item{
-  border:1px solid var(--border);
-  border-left:3px solid var(--sand);
-  border-radius:10px;
-  padding:16px 18px;
-  background:var(--card);
-}
-.scale-range{font-family:var(--font-mono);font-size:12px;color:var(--text-dim);margin-bottom:4px;}
-.scale-name{font-family:var(--font-display);font-size:16px;margin-bottom:6px;}
-.scale-note{font-size:12.5px;color:var(--text-muted);line-height:1.5;}
-
-/* ---------- split ---------- */
-.split{display:grid;grid-template-columns:0.85fr 1.15fr;gap:44px;align-items:center;}
-.split p{color:var(--text-muted);margin-bottom:14px;max-width:54ch;}
-
-/* ---------- utility list ---------- */
-.utility{list-style:none;display:grid;gap:12px;}
-.utility li{
-  display:flex;
-  gap:16px;
-  align-items:flex-start;
-  background:var(--card);
-  border:1px solid var(--border);
-  border-radius:12px;
-  padding:18px 20px;
-  font-size:14.5px;
-  color:var(--text-muted);
-  transition:border-color .2s ease,background .2s ease;
-}
-.utility li:hover{background:var(--card-hover);border-color:rgba(217,160,102,0.3);}
-.utility .tag{
-  font-family:var(--font-display);
-  font-size:11.5px;
-  color:var(--yellow);
-  flex-shrink:0;
-  width:106px;
-  line-height:1.5;
+    radial-gradient(60vw 50vh at 12% -8%, rgba(91, 155, 255, 0.13), transparent 65%),
+    radial-gradient(55vw 45vh at 95% 4%, rgba(245, 48, 156, 0.10), transparent 62%);
 }
 
-/* ---------- cta band ---------- */
-.cta{
-  background:linear-gradient(135deg,var(--rust),var(--sand));
-  border-radius:16px;
-  padding:40px 34px;
-  text-align:center;
-}
-.cta h2{font-family:var(--font-display);font-size:clamp(20px,2.6vw,28px);color:var(--ink);margin-bottom:8px;}
-.cta p{color:rgba(18,13,9,0.75);margin-bottom:22px;font-size:14.5px;}
-.btn-dark{
-  display:inline-flex;
-  align-items:center;
-  gap:9px;
-  padding:13px 26px;
-  border-radius:8px;
-  background:var(--ink);
-  color:var(--yellow);
-  font-weight:700;
-  font-size:14.5px;
-  transition:transform .15s ease;
-}
-.btn-dark:hover{transform:translateY(-2px);}
-.btn-dark svg{width:18px;height:18px;}
+a { color: inherit; text-decoration: none; }
+h1, h2, h3 { margin: 0; line-height: 1.15; letter-spacing: -0.02em; }
 
-/* ---------- footer ---------- */
-.foot{
-  padding:26px 0 8px;
-  border-top:1px solid var(--border-soft);
-  color:var(--text-dim);
-  font-size:12.5px;
-}
-.foot p{max-width:64ch;margin-bottom:6px;}
+/* ============================================================
+   SHELL: sidebar + mobile top bar
+   ============================================================ */
 
-/* Dune art pinned to the bottom, behind the content. The mask fades its top
-   edge out so the ridge lines don't read through the translucent cards. */
-.dune{
-  position:fixed;
-  bottom:0;
-  left:var(--sidebar-w);
-  right:0;
-  z-index:0;
-  pointer-events:none;
-  opacity:0.42;
-  line-height:0;
-  -webkit-mask-image:linear-gradient(to bottom, transparent, #000 62%);
-  mask-image:linear-gradient(to bottom, transparent, #000 62%);
+.topbar {
+  display: none;
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: rgba(11, 8, 9, 0.93);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--line);
 }
-.dune svg{width:100%;height:190px;display:block;}
+
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand-mark { width: 30px; height: 30px; flex: none; }
+
+.brand-name {
+  font-family: "Bungee", sans-serif;
+  font-size: 17px;
+  letter-spacing: 0.02em;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.05;
+}
+.brand-name small {
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--dim);
+  margin-top: 3px;
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--panel);
+  color: var(--ink);
+  cursor: pointer;
+}
+.icon-btn svg { width: 18px; height: 18px; }
+
+.backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 45;
+}
+.backdrop.open { display: block; }
+
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: var(--sidebar-w);
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  background: #100c12;
+  border-right: 1px solid var(--line);
+}
+
+.sidebar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.sidebar-body { flex: 1; overflow-y: auto; padding: 16px 12px; }
+.sidebar-foot { padding: 12px; border-top: 1px solid var(--line); }
+
+.nav-group { margin-bottom: 22px; }
+
+.nav-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--dim);
+  margin: 0 0 8px 8px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 9px;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 500;
+  transition: background 0.15s, color 0.15s;
+}
+.nav-item svg { width: 17px; height: 17px; flex: none; }
+.nav-item .ext { width: 12px; height: 12px; margin-left: auto; opacity: 0.5; }
+.nav-item .x-mark { width: 14px; height: 14px; }
+.nav-item:hover { background: var(--panel); color: var(--ink); }
+.nav-item.active { background: rgba(91, 155, 255, 0.12); color: var(--alpha); }
+
+.ca-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+}
+.ca-btn:hover { border-color: #33333f; }
+.ca-text { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.ca-label { font-size: 10px; letter-spacing: 0.09em; text-transform: uppercase; color: var(--dim); }
+.ca-value { font-family: var(--mono); font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; }
+.ca-value.copied { color: var(--alpha); }
+.ca-copy { width: 15px; height: 15px; color: var(--dim); flex: none; }
+
+.status { display: flex; align-items: center; gap: 8px; padding: 0 8px; font-size: 13px; color: var(--muted); }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--dim); flex: none; }
+.dot.live { background: #35d07f; box-shadow: 0 0 0 3px rgba(53, 208, 127, 0.16); }
+
+.btn-cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 11px;
+  border: 0;
+  border-radius: 10px;
+  background: linear-gradient(100deg, var(--alpha), var(--beta));
+  color: #fff;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.btn-cta svg { width: 16px; height: 16px; }
+
+/* ============================================================
+   LAYOUT
+   ============================================================ */
+
+.main { position: relative; z-index: 1; margin-left: var(--sidebar-w); }
+.page { width: min(1000px, 100%); margin: 0 auto; padding: 0 24px; }
+.hero { padding: 64px 0 40px; }
+.block { padding: 44px 0; }
+
+h1 {
+  font-size: clamp(30px, 4.4vw, 50px);
+  font-weight: 700;
+  max-width: 20ch;
+}
+.hl {
+  background: linear-gradient(96deg, var(--alpha), var(--beta));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.lede { color: var(--muted); font-size: 16px; max-width: 62ch; margin: 16px 0 0; }
+
+.section-title { font-size: clamp(22px, 2.6vw, 30px); font-weight: 700; }
+.section-sub { color: var(--muted); max-width: 66ch; margin: 10px 0 20px; }
+
+/* ============================================================
+   THE GAUGE
+   ============================================================ */
+
+.gauge-wrap { margin-top: 34px; }
+
+.gauge-readout {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+.side-read { display: flex; flex-direction: column; }
+.side-beta { text-align: right; }
+
+.side-name {
+  font-family: "Bungee", sans-serif;
+  font-size: 13px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.side-alpha .side-name { color: var(--alpha); }
+.side-beta .side-name { color: var(--beta); }
+
+.side-pct {
+  font-family: var(--mono);
+  font-size: clamp(34px, 6vw, 58px);
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.side-alpha .side-pct { color: var(--alpha); text-shadow: 0 0 34px var(--alpha-glow); }
+.side-beta .side-pct { color: var(--beta); text-shadow: 0 0 34px var(--beta-glow); }
+
+.side-note { font-size: 12px; color: var(--dim); margin-top: 4px; }
+
+.gauge {
+  position: relative;
+  height: 92px;
+  display: flex;
+  border-radius: 12px;
+  overflow: visible;
+  isolation: isolate;
+}
+.gauge-alpha,
+.gauge-beta {
+  height: 100%;
+  /* The seam is the whole story, so it moves with an ease rather than
+     snapping - a jump reads as a glitch, a slide reads as a measurement. */
+  transition: width 900ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.gauge-alpha {
+  width: 50%;
+  background: linear-gradient(180deg, var(--alpha-mid), var(--alpha-deep));
+  border-radius: 12px 0 0 12px;
+  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.32);
+}
+.gauge-beta {
+  flex: 1;
+  background: linear-gradient(180deg, var(--beta), var(--beta-deep));
+  border-radius: 0 12px 12px 0;
+  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.32);
+}
+
+.gauge-ticks { position: absolute; inset: 0; pointer-events: none; }
+.gauge-tick {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.22);
+}
+.gauge-tick span {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--dim);
+  white-space: nowrap;
+}
+
+.gauge-seam {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  transition: left 900ms cubic-bezier(0.22, 1, 0.36, 1);
+  z-index: 2;
+}
+.seam-line {
+  position: absolute;
+  top: -10px;
+  bottom: -10px;
+  left: -1.5px;
+  width: 3px;
+  background: var(--ink);
+  border-radius: 2px;
+  box-shadow: 0 0 18px rgba(255, 255, 255, 0.45);
+}
+.seam-badge {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 74px;
+  height: 74px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 3px solid var(--ink);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+}
+.seam-badge svg { width: 42px; height: 42px; }
+
+.gauge-foot { margin-top: 44px; }
+.verdict { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+.verdict-label {
+  font-family: "Bungee", sans-serif;
+  font-size: clamp(22px, 3vw, 32px);
+  letter-spacing: 0.01em;
+}
+.verdict-index { font-family: var(--mono); font-size: 14px; color: var(--muted); }
+.verdict-summary { color: var(--muted); max-width: 68ch; margin: 8px 0 0; }
+
+/* ============================================================
+   SAMPLE READINGS
+   ============================================================ */
+
+.samples { margin-top: 26px; }
+.samples-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--dim);
+  margin-bottom: 8px;
+}
+.samples-row { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.sample-btn {
+  padding: 7px 13px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+.sample-btn:hover { color: var(--ink); border-color: #34343f; }
+.sample-btn.active { background: var(--ink); color: var(--bg); border-color: var(--ink); font-weight: 700; }
+.sample-btn.live-btn.active { background: #35d07f; border-color: #35d07f; }
+
+/* ============================================================
+   CARDS
+   ============================================================ */
+
+.card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-top: 22px;
+}
+.card-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.card-head svg { width: 16px; height: 16px; color: var(--dim); }
+.card-head .right { margin-left: auto; font-weight: 400; color: var(--dim); font-size: 12px; }
+
+/* ============================================================
+   TREND STRIP
+   ============================================================ */
+
+.trend { display: flex; align-items: flex-end; gap: 4px; padding: 16px; overflow-x: auto; }
+
+.trend-col { flex: 1 0 22px; min-width: 22px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.trend-bar {
+  width: 100%;
+  height: 72px;
+  border-radius: 4px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: var(--panel-2);
+}
+/* Vertical mirror of the gauge: Alpha fills from the top, Beta from the
+   bottom, so a column and the seam above it read the same way round. */
+.trend-alpha { background: linear-gradient(180deg, var(--alpha-mid), var(--alpha-deep)); }
+.trend-beta { background: linear-gradient(180deg, var(--beta-deep), var(--beta)); flex: 1; }
+.trend-time { font-family: var(--mono); font-size: 9.5px; color: var(--dim); }
+.trend-empty { padding: 22px 16px; color: var(--dim); font-size: 13px; }
+
+/* ============================================================
+   METRIC TILES
+   ============================================================ */
+
+.metric-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+
+.metric {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 18px;
+}
+.metric-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.metric-name { font-size: 15px; font-weight: 700; }
+.metric-weight { font-family: var(--mono); font-size: 11px; color: var(--dim); white-space: nowrap; }
+.metric-score {
+  font-family: var(--mono);
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1;
+  margin: 12px 0 8px;
+  font-variant-numeric: tabular-nums;
+}
+.metric-meter { height: 6px; border-radius: 3px; background: var(--panel-2); overflow: hidden; }
+.metric-fill { height: 100%; border-radius: 3px; transition: width 700ms cubic-bezier(0.22, 1, 0.36, 1); }
+.metric-desc { color: var(--muted); font-size: 13px; margin: 12px 0 0; }
+.metric-src { color: var(--dim); font-size: 11.5px; margin: 8px 0 0; font-family: var(--mono); }
+
+/* ============================================================
+   TIMEFRAME ROWS
+   ============================================================ */
+
+.tf-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+}
+.tf-title { display: flex; align-items: center; gap: 9px; font-size: 13px; font-weight: 700; }
+.tf-title svg { width: 16px; height: 16px; color: var(--dim); }
+.tf-row { display: flex; gap: 6px; margin-left: auto; }
+
+.tf-btn {
+  padding: 5px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 12px;
+  cursor: pointer;
+}
+.tf-btn.active { background: var(--ink); color: var(--bg); border-color: var(--ink); font-weight: 700; }
+.tf-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.tf-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  padding: 16px;
+  border-bottom: 1px solid var(--line);
+}
+.tf-stat { display: flex; flex-direction: column; gap: 2px; }
+.tf-stat-label { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--dim); }
+.tf-stat-value { font-family: var(--mono); font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+}
+.row:last-child { border-bottom: 0; }
+.row-label { flex: 1; font-size: 13.5px; }
+.row-meter { width: 120px; height: 5px; border-radius: 3px; background: var(--panel-2); overflow: hidden; flex: none; }
+.row-value { width: 46px; text-align: right; font-family: var(--mono); font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.row-change { width: 74px; text-align: right; font-family: var(--mono); font-size: 12px; }
+.up { color: #35d07f; }
+.down { color: #ff5c72; }
+.flat { color: var(--dim); }
+
+.tf-note { padding: 12px 16px; color: var(--dim); font-size: 12px; }
+
+/* ============================================================
+   TOKEN TABLE
+   ============================================================ */
+
+.token-table { overflow-x: auto; }
+.token-head, .token-row {
+  display: grid;
+  /* The token column carries a 26px logo plus its gap, so its floor is raised
+     to keep a long ticker from being clipped down to three letters. */
+  grid-template-columns: 26px 62px minmax(150px, 1.4fr) 70px 84px 78px 80px;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 16px;
+  min-width: 680px;
+}
+
+.token-rank {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--dim);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+
+.token-head {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--dim);
+  border-bottom: 1px solid var(--line);
+}
+.token-row { border-bottom: 1px solid var(--line); font-size: 13px; }
+.token-row:last-child { border-bottom: 0; }
+
+.pill {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.pill-alpha { background: rgba(91, 155, 255, 0.16); color: var(--alpha); }
+.pill-beta { background: rgba(245, 48, 156, 0.15); color: var(--beta); }
+
+.token-name { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.token-sym { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* The logo and its fallback occupy the same box, stacked. The image sits on
+   top and is removed if it fails to load, which uncovers the monogram - so a
+   token with no picture and a token whose picture 404s look the same, and
+   neither leaves a gap that knocks the row out of alignment. */
+.token-logo {
+  position: relative;
+  width: 26px;
+  height: 26px;
+  flex: none;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+}
+.token-monogram {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.token-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: var(--panel-2);
+}
+.token-num { font-family: var(--mono); font-variant-numeric: tabular-nums; text-align: right; }
+.token-flag { color: var(--beta); font-size: 11px; font-weight: 700; }
+.token-empty { padding: 26px 16px; color: var(--dim); font-size: 13px; }
+
+/* ============================================================
+   ALPHA VS BETA
+   ============================================================ */
+
+.vs { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+
+.vs-card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 22px;
+  background: var(--panel);
+}
+.vs-alpha { border-top: 3px solid var(--alpha); background: linear-gradient(180deg, rgba(91, 155, 255, 0.09), var(--panel) 45%); }
+.vs-beta { border-top: 3px solid var(--beta); background: linear-gradient(180deg, rgba(245, 48, 156, 0.09), var(--panel) 45%); }
+
+.vs-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+.vs-tag { font-family: "Bungee", sans-serif; font-size: 15px; letter-spacing: 0.1em; }
+.vs-alpha .vs-tag { color: var(--alpha); }
+.vs-beta .vs-tag { color: var(--beta); }
+.vs-score { font-family: var(--mono); font-size: 11.5px; color: var(--dim); }
+
+.vs-card h3 { font-size: 17px; font-weight: 700; margin-bottom: 14px; }
+.vs-card ul { margin: 0; padding-left: 18px; color: var(--muted); font-size: 13.5px; }
+.vs-card li { margin-bottom: 9px; }
+.vs-card li strong { color: var(--ink); font-weight: 700; }
+.vs-note { margin: 14px 0 0; padding-top: 13px; border-top: 1px solid var(--line); color: var(--dim); font-size: 12.5px; }
+
+.scale { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 1px; background: var(--line); }
+.scale-item { padding: 14px 16px; background: var(--panel); border-left: 3px solid; }
+.scale-range { font-family: var(--mono); font-size: 11px; color: var(--dim); }
+.scale-name { font-weight: 700; font-size: 14px; margin: 3px 0 5px; }
+.scale-note { color: var(--muted); font-size: 12.5px; }
+
+/* ============================================================
+   CTA + FOOT
+   ============================================================ */
+
+.cta {
+  padding: 40px 32px;
+  border-radius: 18px;
+  text-align: center;
+  background: linear-gradient(100deg, rgba(91, 155, 255, 0.16), rgba(245, 48, 156, 0.16));
+  border: 1px solid var(--line);
+}
+.cta h2 { font-size: clamp(20px, 2.6vw, 28px); font-weight: 700; }
+.cta p { color: var(--muted); margin: 10px 0 20px; }
+
+.btn-dark {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 11px 20px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--bg);
+  font-weight: 700;
+  font-size: 14px;
+}
+.btn-dark svg { width: 15px; height: 15px; }
+
+.foot {
+  margin-top: 34px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+  color: var(--dim);
+  font-size: 12.5px;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.foot p { margin: 0; }
 
 /* ============================================================
    RESPONSIVE
    ============================================================ */
-@media (max-width:1080px){
-  .report{grid-template-columns:1fr;}
-  .split{grid-template-columns:1fr;gap:28px;}
+
+@media (max-width: 940px) {
+  .metric-grid, .vs { grid-template-columns: 1fr; }
 }
-@media (max-width:900px){
-  .sidebar{transform:translateX(-100%);}
-  .sidebar.open{transform:translateX(0);}
-  .topbar{display:flex;}
-  .main{margin-left:0;padding-top:var(--topbar-h);}
-  .dune{left:0;}
-  .page{padding:0 22px;}
-  .block{padding:44px 0;}
+
+@media (max-width: 860px) {
+  .topbar { display: flex; }
+  .main { margin-left: 0; }
+  .sidebar { transform: translateX(-100%); transition: transform 0.22s ease; }
+  .sidebar.open { transform: none; }
+  .hero { padding: 34px 0 28px; }
+  .page { padding: 0 16px; }
+  .gauge { height: 74px; }
+  .seam-badge { width: 58px; height: 58px; border-width: 2px; }
+  .seam-badge svg { width: 33px; height: 33px; }
+  .gauge-foot { margin-top: 38px; }
 }
-@media (max-width:520px){
-  .report{padding:22px;}
-  .score{font-size:42px;}
-  .utility li{flex-direction:column;gap:6px;}
-  .utility .tag{width:auto;}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .gauge-alpha, .gauge-beta, .gauge-seam, .metric-fill { transition: none; }
 }
-@media (prefers-reduced-motion:reduce){
-  *{animation:none !important;transition:none !important;}
-  html{scroll-behavior:auto;}
+
+/* ============================================================
+   COVERAGE
+   A metric that couldn't be read has to look different from one that
+   scored badly, or the page overstates what it knows.
+   ============================================================ */
+
+.metric-gap {
+  margin: 12px 0 0;
+  padding: 7px 10px;
+  border-left: 2px solid var(--dim);
+  background: var(--panel-2);
+  border-radius: 0 6px 6px 0;
+  color: var(--muted);
+  font-size: 12px;
 }
+
+/* Backfilled trend columns. Faded and desaturated so a reconstructed hour
+   never reads as a measured one at a glance. */
+.trend-filled { opacity: 0.42; }
+.trend-filled .trend-bar { filter: saturate(0.5); }
+
+.trend-note {
+  margin: 0;
+  cursor: help;
+  padding: 12px 16px;
+  border-top: 1px solid var(--line);
+  color: var(--dim);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* Coverage so thin the aggregate can't be read as a market claim. */
+.metric-gap-thin {
+  border-left-color: var(--beta);
+  color: var(--muted);
+}
+
+/* Marks a score built on fewer than four metrics. */
+.token-partial {
+  color: var(--dim);
+  font-weight: 400;
+  cursor: help;
+  margin-left: 1px;
+}
+
+/* A run that couldn't read part of its shortlist. Not an error the page can
+   fix, but not something it may quietly round off either. */
+.token-warn {
+  padding: 11px 16px;
+  border-bottom: 1px solid var(--line);
+  background: rgba(245, 48, 156, 0.07);
+  border-left: 3px solid var(--beta);
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+/* Token name cell: symbol, plus the address when the ticker isn't unique. */
+.token-text { display: flex; flex-direction: column; min-width: 0; }
+
+
+/* The two words the whole page turns on, defined once at the gauge itself so
+   it can be read without scrolling to the section that explains them. */
+.gauge-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 26px;
+  margin-top: 30px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.gauge-legend b {
+  font-family: "Bungee", sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  margin-right: 7px;
+}
+.k-alpha { color: var(--alpha); }
+.k-beta { color: var(--beta); }
+
+@media (max-width: 860px) {
+  .gauge-legend { margin-top: 26px; gap: 4px 18px; }
+}
+
+/* ============================================================
+   PAGER
+   The token table carries every scored token now - several hundred - so it
+   pages rather than truncating. Ranks run across pages, so a row's number is
+   its place in the market rather than on the screen.
+   ============================================================ */
+
+.pager {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  border-top: 1px solid var(--line);
+}
+
+.page-btn {
+  min-width: 30px;
+  padding: 5px 8px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+.page-btn:hover:not(:disabled) { color: var(--ink); border-color: #3a3446; }
+.page-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+.page-current {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--bg);
+  font-weight: 700;
+}
+
+.page-gap { color: var(--dim); padding: 0 2px; }
+
+.page-count {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--dim);
+}
+
+@media (max-width: 600px) {
+  .page-count { margin-left: 0; width: 100%; }
+}
+
+/* Contract address on every token row, click to copy.
+   A ticker is not an identity on this chain - several are shared by more than
+   one contract - so the address is the only thing that names the token. */
+.token-ca {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 1px;
+  padding: 1px 5px 1px 0;
+  border: 0;
+  background: none;
+  color: var(--dim);
+  font-family: var(--mono);
+  font-size: 10.5px;
+  line-height: 1.5;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: color 0.15s, background 0.15s;
+}
+.token-ca:hover { color: var(--ink); background: var(--panel-2); padding-left: 5px; }
+.token-ca-icon { opacity: 0.55; font-size: 10px; }
+.token-ca:hover .token-ca-icon { opacity: 1; }
+
+/* A shared ticker is a real hazard, so those addresses stay marked. */
+.token-ca-dupe { color: var(--beta); }
+.token-ca-dupe:hover { color: var(--beta); }
+
+.token-ca.copied { color: #35d07f; background: rgba(53, 208, 127, 0.1); padding-left: 5px; }
+.token-ca.copied .token-ca-icon { opacity: 0; }

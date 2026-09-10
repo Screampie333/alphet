@@ -28,12 +28,39 @@ export function readAll() {
   }
 }
 
+// Only the newest snapshots keep their token list.
+//
+// A full reading carries every token it scored - several hundred, about a
+// quarter of a megabyte - and that is the point: the table is the gauge's
+// working, so truncating it would hide the rows a reader wants to check. But
+// only the newest reading is ever displayed with its tokens, and /api/history
+// strips them anyway, so keeping them on every past snapshot would grow the
+// file by megabytes a day for nothing.
+const SNAPSHOTS_WITH_TOKENS = 1;
+
+// Roughly a month at a three-hour interval. History has to live in the repo
+// for the deploy to carry it, so it is bounded rather than left to grow.
+const KEEP_SNAPSHOTS = 260;
+
 // Add one snapshot to the end of the file.
 export function append(snapshot) {
   const all = readAll();
   all.push(snapshot);
-  fs.writeFileSync(config.dataFile, JSON.stringify(all, null, 2), "utf8");
-  return all.length;
+
+  const capped = all.slice(-KEEP_SNAPSHOTS);
+  const cutoff = capped.length - SNAPSHOTS_WITH_TOKENS;
+  const pruned = capped.map((s, i) => (i < cutoff && s.tokens?.length ? { ...s, tokens: [] } : s));
+
+  fs.writeFileSync(config.dataFile, JSON.stringify(pruned, null, 2), "utf8");
+  return pruned.length;
+}
+
+// Replace the whole file. Only backfill needs this - it inserts snapshots
+// before existing ones, which append() cannot do.
+export function writeAll(snapshots) {
+  ensureFile();
+  fs.writeFileSync(config.dataFile, JSON.stringify(snapshots, null, 2), "utf8");
+  return snapshots.length;
 }
 
 // Get the snapshots from the last N days - used for rolling averages.

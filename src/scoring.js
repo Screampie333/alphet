@@ -1,220 +1,487 @@
 // scoring.js
-// Turns raw numbers into the Haboob weather index.
+// Turns the raw on-chain readings into the Alphet gauge.
 //
-// The idea in three steps:
-//   1. turn each raw number into a 0-100 sub-score
-//   2. combine the sub-scores using the weights in config.js
-//   3. map the final 0-100 index onto a weather condition
+// Three steps:
+//   1. score each token on four metrics, 0-100, where 100 is Alpha-side
+//   2. weigh those into one quality score per token, and cut the population
+//      into Alpha and Beta at config.alphaCutoff
+//   3. work out where the money went, which is what the gauge seam shows
 //
-// Sub-scores are relative to your own recent history, not to fixed numbers.
-// That matters: "50,000 SOL of volume" means nothing on its own, but
-// "double the usual volume" means a lot.
+// Unlike the weather index this replaced, the thresholds here are absolute
+// rather than relative to our own history. "The top 10 wallets hold 62% of
+// supply" is a complete statement about a token - it does not need a baseline
+// to mean something - so the very first run is already a real reading, and two
+// runs a month apart are directly comparable.
 
 import { config } from "./config.js";
 
-// Keep a number inside 0-100.
 function clamp(n) {
   return Math.max(0, Math.min(100, n));
 }
 
-// Compare today's value to a baseline average.
-// Same as baseline -> 50. Double the baseline -> 100. Half -> 25.
-function relativeScore(current, baseline) {
-  if (!baseline || baseline <= 0) return 50; // no history yet, assume neutral
-  const ratio = current / baseline;
-  return clamp(ratio * 50);
+/**
+ * Interpolate a value between a "good" and a "bad" anchor onto 0-100.
+ * Works in either direction, so `good` may be the larger or the smaller number.
+ *
+ * `log` is for quantities that span orders of magnitude - volume per holder
+ * runs from 30 to 12,000, and interpolating that linearly would put almost
+ * every real token at one end or the other.
+ */
+function band(value, good, bad, { log = false } = {}) {
+  let v = value;
+  let g = good;
+  let b = bad;
+
+  if (log) {
+    v = Math.log(Math.max(v, 1e-9));
+    g = Math.log(Math.max(g, 1e-9));
+    b = Math.log(Math.max(b, 1e-9));
+  }
+
+  if (g === b) return 50;
+  return clamp(100 * (1 - (v - g) / (b - g)));
 }
 
-// Work out the average of one field across past snapshots.
-function averageOf(snapshots, getValue) {
-  if (!snapshots.length) return 0;
-  const total = snapshots.reduce((sum, s) => sum + (getValue(s) || 0), 0);
-  return total / snapshots.length;
+// --- 1. Holder distribution ---
+// Concentrated supply is the loudest scam tell there is: one wallet holding
+// most of the float can end the token in a single transaction, whatever the
+// chart is doing.
+export function scoreHolderDistribution(token) {
+  const t = config.thresholds;
+  const { top10Percent, holderCount } = token.holders;
+
+  // The collector returns null when it could not enumerate the holder set.
+  // A share computed from a partial sample understates concentration - badly,
+  // and always in the flattering direction - so there is nothing to score.
+  if (top10Percent === null || top10Percent === undefined) return null;
+
+  const spread = band(top10Percent, t.top10GoodPercent, t.top10BadPercent);
+
+  // Below about 25 holders the metric measures nothing: "the top 10 hold 80%"
+  // is arithmetic, not concentration, when there are only 12 holders in total.
+  // Rather than report a number it can't stand behind, it reports risk.
+  if (holderCount < t.minHolders) return Math.min(spread, 30);
+
+  return spread;
+}
+
+// --- 2. Liquidity permanence ---
+// The only exit that matters is whether the dev can take the pool with them.
+export function scoreLiquidityPermanence(token) {
+  const liq = token.liquidity;
+  if (!liq) return 0;
+
+  // Uniswap V3/V4 hold liquidity as per-position NFTs rather than a fungible
+  // LP token, so "what share can be pulled" needs the position manager and a
+  // different answer per position. Returning null drops the metric for this
+  // token and reweights the other three - scoring an unreadable pool as 0
+  // would accuse it of something we never measured, and a large share of RHC
+  // volume sits on exactly those pools.
+  if (liq.measurable === false) return null;
+
+  if (liq.drained) return 0;
+
+  // A lock is worth what remains of it. An unlock next week is a rug with a
+  // calendar entry, so a short lock is discounted toward the day it ends -
+  // and an unknown lock length gets the floor rather than the benefit of the
+  // doubt, because we cannot read most lockers' unlock times.
+  const remaining = Math.min(1, (liq.lockDaysRemaining || 0) / config.thresholds.fullLockDays);
+  const lockFactor = 0.3 + 0.7 * remaining;
+
+  const secured = liq.burnedPercent + liq.lockedPercent * lockFactor;
+  return clamp(secured);
+}
+
+// --- 3. Developer track record ---
+export function scoreDevTrackRecord(token) {
+  const dev = token.devRecord;
+  if (!dev || !dev.known || dev.launches === 0) {
+    // A first launch is not a red flag and it is not a credential either.
+    // Slightly below neutral: unproven is a real cost to a buyer.
+    return 45;
+  }
+
+  const cleanRate = 1 - dev.rugs / dev.launches;
+
+  if (dev.rugs === 0) {
+    // A clean record earns more the longer it is. Ten shipped tokens with
+    // nothing dead behind them is the strongest signal on this whole board.
+    return clamp(60 + Math.min(dev.launches, 10) * 4);
+  }
+
+  // Once there is a rug in the history the ceiling drops hard, and a repeat
+  // offender never climbs back. Someone who has done it three times is
+  // telling you what the fourth one is.
+  const scored = 45 * cleanRate;
+  return clamp(dev.rugs >= 3 ? Math.min(scored, 15) : scored);
+}
+
+// --- 4. Time-to-rug signals ---
+// Three live warning signs, combined. Each is weak alone and they are strong
+// together, which is why they share one slot instead of taking three.
+export function scoreRugSignals(token, windowKey = "h24") {
+  const t = config.thresholds;
+
+  const hp = token.honeypot || {};
+
+  // The only metric that genuinely differs by timeframe. Supply concentration,
+  // LP permanence and a dev's history are all facts about right now and read
+  // the same whichever window you pick; how a token is trading is not.
+  const activity = token.activity.windows?.[windowKey] || token.activity;
+
+  // A token you cannot sell is not a risky investment, it is not an
+  // investment. Nothing else on the board can outvote this.
+  if (hp.blocked) {
+    return { score: 0, signals: { volumePerHolder: 0, buyPressure: 0, exit: 0 }, bad: 3 };
+  }
+
+  // These three signals all read trading behaviour, and a token nobody is
+  // trading has none to read. Left unguarded the arithmetic is actively
+  // misleading: zero volume divided by any holder count is zero, which lands
+  // at the healthy end of the volume-per-holder band and scores a dead token
+  // 100. The metric drops instead, and its weight moves to the three
+  // structural ones - supply, liquidity and dev history are all still real
+  // facts about a token nobody wants.
+  if ((activity.trades || 0) < t.minTradesForSignal) {
+    return { score: null, signals: {}, bad: 0, reason: "too few trades to read" };
+  }
+
+  // Volume per holder is only meaningful when the holder count is a count.
+  // The replay is clipped for anything older or busier than one window, and
+  // dividing real volume by a floor produces a number that climbs with a
+  // token's popularity - which would read every large token as wash-traded.
+  const holdersAreAFloor = token.holders.partial || token.holders.capped;
+
+  const volumePerHolder = holdersAreAFloor
+    ? null
+    : band(
+        activity.volumePerHolder,
+        t.healthyVolumePerHolder,
+        t.suspiciousVolumePerHolder,
+        { log: true }
+      );
+
+  const buyPressure = band(activity.buyRatio, t.buyPressureGood, t.buyPressureBad);
+
+  // A sell we never managed to simulate is not a sell that worked. It reads as
+  // unknown so it can neither rescue a bad token nor sink a good one - marking
+  // it a pass would hand a free 100 to every token too broken to test.
+  const exit = hp.tested ? 100 : 50;
+
+  const present = [volumePerHolder, buyPressure, exit].filter((s) => s !== null);
+  if (!present.length) return { score: null, signals: {}, bad: 0 };
+
+  const bad = present.filter((s) => s < 40).length;
+  let score = present.reduce((sum, s) => sum + s, 0) / present.length;
+
+  // Two bad signals at once is the pattern, not a coincidence: heavy volume
+  // against a handful of holders while the flow is mostly sells is a
+  // distribution, and it should land on the Beta side rather than average out
+  // to something respectable.
+  if (bad >= 2) score /= 2;
+
+  return {
+    score: clamp(score),
+    signals: {
+      volumePerHolder: volumePerHolder === null ? null : Math.round(volumePerHolder),
+      buyPressure: Math.round(buyPressure),
+      exit,
+    },
+    bad,
+  };
+}
+
+export const METRIC_KEYS = [
+  "holderDistribution",
+  "liquidityPermanence",
+  "devTrackRecord",
+  "rugSignals",
+];
+
+function round(value) {
+  return value === null ? null : Math.round(value);
+}
+
+/** Score one token on all four metrics and decide which side it falls. */
+export function scoreToken(token, windowKey = "h24") {
+  const rug = scoreRugSignals(token, windowKey);
+  const activity = token.activity.windows?.[windowKey] || token.activity;
+
+  const scores = {
+    holderDistribution: round(scoreHolderDistribution(token)),
+    liquidityPermanence: round(scoreLiquidityPermanence(token)),
+    devTrackRecord: round(scoreDevTrackRecord(token)),
+    rugSignals: round(rug.score),
+  };
+
+  // A metric we could not measure is dropped and its weight shared out across
+  // the ones we could, rather than counted as zero. The alternative reads
+  // "unmeasured" as "bad", which would put every V3 pool on the Beta side for
+  // no reason anyone could point at.
+  const w = config.weights;
+  const measured = METRIC_KEYS.filter((key) => scores[key] !== null);
+  const totalWeight = measured.reduce((sum, key) => sum + w[key], 0);
+
+  const quality = totalWeight > 0
+    ? Math.round(
+        clamp(measured.reduce((sum, key) => sum + scores[key] * w[key], 0) / totalWeight)
+      )
+    : null;
+
+  return {
+    address: token.address,
+    symbol: token.symbol,
+    name: token.name,
+    dex: token.dex,
+    imageUrl: token.imageUrl || null,
+    // Kept so backfill can find the token's chart without re-running discovery.
+    poolAddress: token.poolAddress || null,
+    ageHours: token.ageHours,
+    volumeUsd: activity.volumeUsd,
+    liquidityUsd: token.liquidity?.liquidityUsd ?? null,
+    holderCount: token.holders.holderCount,
+    holderCountIsFloor: Boolean(token.holders.capped),
+    top10Percent: token.holders.top10Percent,
+    honeypot: Boolean(token.honeypot?.blocked),
+    scores,
+    unmeasured: METRIC_KEYS.filter((key) => scores[key] === null),
+    // Either flag means the holder count is a floor: the time window was
+    // clipped, or the candidate cap bit before the set was enumerated.
+    partialHolders: Boolean(token.holders.partial || token.holders.capped),
+    rugSignals: rug.signals,
+    quality,
+    side: quality !== null && quality >= config.alphaCutoff ? "alpha" : "beta",
+  };
 }
 
 /**
- * Calculate all four sub-scores.
+ * Where the gauge seam sits.
  *
- * @param raw      today's raw numbers from collector.js
- * @param history  past snapshots, used as the baseline
+ * alphaWeight is money-weighted rather than counted, because the question the
+ * gauge answers is "where is the money going", not "how many tokens exist".
+ * Junk launches outnumber good ones on every chain and always will - counting
+ * heads would pin the seam to the Beta side permanently and the gauge would
+ * never move again.
  */
-// Rates are read over a trailing window rather than off the single newest
-// snapshot.
-//
-// A five-minute window holds 0-5 graduations, and a count that small is
-// mostly Poisson noise: measured across 41 real snapshots the per-window
-// graduation rate ran 0.0-8.3% with 61% variation, while the same data pooled
-// over an hour ran 2.4-4.1% with 14%. The means agreed - 3.23% against 3.04%
-// - so pooling costs no accuracy, it only stops the score reading market
-// noise as market news. That swing was what pinned the tiles at 0 and 100.
-//
-// Twelve snapshots is an hour at the default five-minute interval.
-const POOL_SNAPSHOTS = 12;
+export function determineVerdict(alphaWeight) {
+  const t = config.verdictThresholds;
 
-function sumOf(snapshots, getValue) {
-  return snapshots.reduce((total, s) => total + (getValue(s) || 0), 0);
+  if (alphaWeight >= t.alphaHeavy) {
+    return {
+      key: "alpha-heavy",
+      label: "Alpha-heavy",
+      summary:
+        "Most money is buying spread supply and locked liquidity. The good end of a memecoin market.",
+    };
+  }
+  if (alphaWeight >= t.alphaLean) {
+    return {
+      key: "alpha-lean",
+      label: "Alpha lean",
+      summary:
+        "More money in quality than junk — but not by much. Read the token, not the gauge.",
+    };
+  }
+  if (alphaWeight >= t.betaLean) {
+    return {
+      key: "balanced",
+      label: "Balanced",
+      summary:
+        "Close to even. Which one you get is down to what you buy.",
+    };
+  }
+  if (alphaWeight >= t.betaHeavy) {
+    return {
+      key: "beta-lean",
+      label: "Beta lean",
+      summary:
+        "Money is leaning toward concentrated supply and pullable liquidity.",
+    };
+  }
+  return {
+    key: "beta-heavy",
+    label: "Beta-heavy",
+    summary:
+      "Almost all the money is on the Beta side. Devs hold the float and can pull the pool.",
+  };
 }
 
-export function calculateSubScores(raw, history = []) {
-  // The newest snapshot has not been stored yet, so it is prepended here to
-  // stand at the head of its own trailing window.
-  const withCurrent = [...history, { raw }];
-  const recent = withCurrent.slice(-POOL_SNAPSHOTS);
+// 0 keeps every scored token. The gauge is only as auditable as the list
+// behind it, and truncating that list meant the page could not show the very
+// tokens a reader wanted to check.
+//
+// Size is handled where it belongs: storage.js strips the token list from all
+// but the newest few snapshots, since only the newest is ever displayed with
+// its tokens and /api/history drops them anyway.
+const TOKENS_KEPT = Number(process.env.TOKENS_KEPT || 0);
 
-  // The baseline must not overlap the pooled window, or each would drag the
-  // other toward the middle and every score would sit near 50.
-  const baseline = withCurrent.slice(0, Math.max(0, withCurrent.length - POOL_SNAPSHOTS));
+// Tokens whose value for this metric is null are left out entirely rather
+// than counted as zero - see the note on unmeasured metrics in scoreToken.
+function weightedMean(items, getValue, getWeight) {
+  const usable = items.filter((item) => {
+    const v = getValue(item);
+    return v !== null && v !== undefined && Number.isFinite(v);
+  });
+  if (!usable.length) return null;
 
-  // --- 1. Graduation rate ---
-  // A ratio of sums across the window, not the average of each snapshot's own
-  // ratio: a quiet window with 3 tokens must not weigh as much as a busy one
-  // with 300.
-  const created = sumOf(recent, (s) => s.raw.tokensCreated);
-  const gradRate = created > 0 ? sumOf(recent, (s) => s.raw.tokensGraduated) / created : 0;
+  const totalWeight = usable.reduce((sum, item) => sum + getWeight(item), 0);
 
-  const baseCreated = sumOf(baseline, (s) => s.raw.tokensCreated);
-  const baselineGradRate =
-    baseCreated > 0 ? sumOf(baseline, (s) => s.raw.tokensGraduated) / baseCreated : 0;
+  // With no volume anywhere there is nothing to weigh by, so every token
+  // counts once. This is the normal state on a quiet chain, not an error.
+  if (totalWeight <= 0) {
+    return usable.reduce((sum, item) => sum + getValue(item), 0) / usable.length;
+  }
 
-  const graduationScore = relativeScore(gradRate, baselineGradRate);
+  return usable.reduce((sum, item) => sum + getValue(item) * getWeight(item), 0) / totalWeight;
+}
 
-  // --- 2. Volume ---
-  const volume = averageOf(recent, (s) => s.raw.totalVolumeSol);
-  const baselineVolume = averageOf(baseline, (s) => s.raw.totalVolumeSol);
-  const volumeScore = relativeScore(volume, baselineVolume);
+/**
+ * Score the whole population over one timeframe.
+ *
+ * Split out because the dashboard offers four of them. Three of the metrics
+ * are facts about right now and read the same whichever window you pick, but
+ * how a token is trading is not - so the Alpha/Beta line itself can fall
+ * differently at 15 minutes than it does over a day, and that difference is
+ * the most useful thing on the page: it is money rotating between the two
+ * sides while you watch.
+ */
+function scoreWindow(tokens, windowKey) {
+  const scored = tokens
+    .map((token) => scoreToken(token, windowKey))
+    .filter((t) => t.quality !== null);
 
-  // --- 3. Rug rate (inverted: more rugs = lower score) ---
-  const active = sumOf(recent, (s) => s.raw.activeTokens);
-  const rugRate = active > 0 ? sumOf(recent, (s) => s.raw.tokensRugged) / active : 0;
+  if (!scored.length) return null;
 
-  const baseActive = sumOf(baseline, (s) => s.raw.activeTokens);
-  const baselineRugRate =
-    baseActive > 0 ? sumOf(baseline, (s) => s.raw.tokensRugged) / baseActive : 0;
+  const volume = (token) => Math.max(0, token.volumeUsd || 0);
 
-  const rugRaw = relativeScore(rugRate, baselineRugRate);
-  const rugScore = clamp(100 - rugRaw); // invert - high rugs should hurt
+  const alpha = scored.filter((token) => token.side === "alpha");
+  const beta = scored.filter((token) => token.side === "beta");
 
-  // --- 4. Volatility (inverted: wilder swings = lower score) ---
-  const swing = averageOf(recent, (s) => s.raw.avgPriceSwingPercent);
-  const baselineSwing = averageOf(baseline, (s) => s.raw.avgPriceSwingPercent);
-  const volatilityRaw = relativeScore(swing, baselineSwing);
-  const volatilityScore = clamp(100 - volatilityRaw);
+  const alphaVolume = alpha.reduce((sum, token) => sum + volume(token), 0);
+  const betaVolume = beta.reduce((sum, token) => sum + volume(token), 0);
+  const totalVolume = alphaVolume + betaVolume;
+
+  const alphaWeight =
+    totalVolume > 0
+      ? (alphaVolume / totalVolume) * 100
+      : (alpha.length / scored.length) * 100;
+
+  const subScores = {};
+  const measuredOn = {};
+  for (const key of METRIC_KEYS) {
+    const mean = weightedMean(scored, (t) => t.scores[key], volume);
+    subScores[key] = mean === null ? null : Math.round(mean);
+    measuredOn[key] = scored.filter((t) => t.scores[key] !== null).length;
+  }
 
   return {
-    graduation: Math.round(graduationScore),
-    volume: Math.round(volumeScore),
-    rug: Math.round(rugScore),
-    volatility: Math.round(volatilityScore),
-
-    // The pooled figures the scores were actually built from, plus how many
-    // snapshots went into them - a score is not readable without knowing how
-    // much it is standing on.
-    rates: {
-      graduationRatePercent: Number((gradRate * 100).toFixed(2)),
-      rugRatePercent: Number((rugRate * 100).toFixed(2)),
-      avgPriceSwingPercent: Number((swing || 0).toFixed(2)),
-      volumeSol: Number((volume || 0).toFixed(2)),
-      pooledSnapshots: recent.length,
-      baselineSnapshots: baseline.length,
+    scored,
+    alphetIndex: Math.round(weightedMean(scored, (t) => t.quality, volume)),
+    alphaWeight: Number(alphaWeight.toFixed(1)),
+    betaWeight: Number((100 - alphaWeight).toFixed(1)),
+    verdict: determineVerdict(alphaWeight),
+    subScores,
+    measuredOn,
+    split: {
+      alphaCount: alpha.length,
+      betaCount: beta.length,
+      alphaVolume: Number(alphaVolume.toFixed(2)),
+      betaVolume: Number(betaVolume.toFixed(2)),
+      totalVolume: Number(totalVolume.toFixed(2)),
+      honeypots: scored.filter((t) => t.honeypot).length,
+      partialHolders: scored.filter((t) => t.partialHolders).length,
     },
   };
 }
 
-/**
- * Combine the sub-scores into one 0-100 index using the config weights.
- */
-export function calculateIndex(subScores) {
-  const w = config.weights;
+// The timeframes the dashboard offers. 24h is the headline: it is the window
+// with enough trades behind it that one whale doesn't set the reading.
+export const WINDOW_KEYS = ["m15", "h1", "h6", "h24"];
+const HEADLINE_WINDOW = "h24";
 
-  const index =
-    subScores.graduation * w.graduationRate +
-    subScores.volume * w.volume +
-    subScores.rug * w.rugRate +
-    subScores.volatility * w.volatility;
-
-  return Math.round(clamp(index));
-}
-
-/**
- * Map the index onto a weather condition.
- */
-export function determineCondition(index, subScores, historyCount = 0) {
-  const t = config.thresholds;
-
-  // Extreme overrides everything: when swings are this wild, the average
-  // index stops being meaningful and people just need a warning.
-  //
-  // But "wild" is measured against your own baseline, so with only a couple
-  // of snapshots on file the baseline is meaningless and this fires almost
-  // every run. We require a real baseline before it can trigger at all.
-  const hasRealBaseline = historyCount >= config.minSnapshotsForExtreme;
-  const swingIsExtreme =
-    hasRealBaseline &&
-    100 - subScores.volatility >= config.extremeVolatilityCutoff;
-
-  if (swingIsExtreme) {
-    return {
-      key: "extreme",
-      label: "Extreme",
-      emoji: "🌪️",
-      summary:
-        "Wild swings across the board. One token is dragging the whole market, or everything is moving at once.",
-    };
-  }
-
-  if (index >= t.sunny) {
-    return {
-      key: "sunny",
-      label: "Sunny",
-      emoji: "☀️",
-      summary:
-        "Lots of tokens graduating, volume is up, rugs are below normal. The friendliest conditions to enter.",
-    };
-  }
-
-  if (index >= t.cloudy) {
-    return {
-      key: "cloudy",
-      label: "Cloudy",
-      emoji: "⛅",
-      summary:
-        "Normal volume, no clear trend either way. Nothing here rewards rushing.",
-    };
-  }
-
-  if (index >= t.overcast) {
-    return {
-      key: "overcast",
-      label: "Overcast",
-      emoji: "🌧️",
-      summary:
-        "Volume is fading and fewer tokens are making it off the bonding curve.",
-    };
-  }
-
-  return {
-    key: "storm",
-    label: "Storm",
-    emoji: "⛈️",
-    summary:
-      "Rugs are above normal and tokens are collapsing together. Hard conditions.",
-  };
-}
-
-/**
- * Run the whole scoring pipeline on one set of raw numbers.
- */
+/** Run the whole pipeline on one collection. */
 export function score(raw, history = []) {
-  const subScores = calculateSubScores(raw, history);
-  const index = calculateIndex(subScores);
-  const condition = determineCondition(index, subScores, history.length);
+  const tokens = raw.tokens || [];
+
+  // Every timeframe is computed up front so switching one on the page is
+  // instant rather than another collection run - which at RPC prices would be
+  // several minutes.
+  const windows = {};
+  for (const key of WINDOW_KEYS) {
+    const result = scoreWindow(tokens, key);
+    if (!result) continue;
+    const { scored: _dropped, ...summary } = result;
+    windows[key] = summary;
+  }
+
+  const headline = scoreWindow(tokens, HEADLINE_WINDOW);
+  // A token where every metric came back unmeasurable has no reading to
+  // contribute and must not dilute the ones that do.
+  const scored = headline ? headline.scored : [];
+
+  if (!scored.length) {
+    return {
+      timestamp: new Date().toISOString(),
+      alphetIndex: null,
+      alphaWeight: null,
+      betaWeight: null,
+      verdict: {
+        key: "no-data",
+        label: "No reading",
+        summary: "No tokens were readable this run.",
+      },
+      subScores: {},
+      split: { alphaCount: 0, betaCount: 0, alphaVolume: 0, betaVolume: 0 },
+      tokens: [],
+      raw: { ...raw, tokens: [] },
+      baselineSnapshots: history.length,
+    };
+  }
+
+  const volume = (token) => Math.max(0, token.volumeUsd || 0);
+
+  // Two contracts trading under one ticker is the oldest trick on a memecoin
+  // chain: copy a name that is working and collect the mistaken buys. We
+  // cannot tell which one is the original - the copy is often the busier of
+  // the two - so neither is accused and both are marked, because the danger
+  // is not knowing there are two.
+  const symbolCounts = new Map();
+  for (const token of scored) {
+    symbolCounts.set(token.symbol, (symbolCounts.get(token.symbol) || 0) + 1);
+  }
+  for (const token of scored) {
+    token.duplicateSymbol = symbolCounts.get(token.symbol) > 1;
+  }
 
   return {
     timestamp: new Date().toISOString(),
-    index,
-    condition,
-    subScores,
-    raw,
+
+    // The headline reading is the 24-hour window - enough trades behind it
+    // that one whale doesn't set it. The others sit alongside in `windows`.
+    alphetIndex: headline.alphetIndex,
+    alphaWeight: headline.alphaWeight,
+    betaWeight: headline.betaWeight,
+    verdict: headline.verdict,
+    subScores: headline.subScores,
+    // How many tokens each metric could actually be read on, so a tile can say
+    // "42 of 58 tokens" instead of implying it covered the whole population.
+    measuredOn: headline.measuredOn,
+    split: headline.split,
+
+    windows,
+    headlineWindow: HEADLINE_WINDOW,
+
+    tokens: (() => {
+      const ranked = [...scored].sort((a, b) => volume(b) - volume(a));
+      return TOKENS_KEPT > 0 ? ranked.slice(0, TOKENS_KEPT) : ranked;
+    })(),
+    raw: {
+      source: raw.source,
+      chain: raw.chain,
+      measuredAt: raw.measuredAt,
+      lookbackHours: raw.lookbackHours,
+      totals: raw.totals,
+    },
     baselineSnapshots: history.length,
   };
 }

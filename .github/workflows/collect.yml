@@ -1,0 +1,71 @@
+name: Collect and deploy
+
+# Every three hours, plus a button in the Actions tab for running it by hand.
+#
+# The collector cannot live on Cloudflare: one run makes about 2,200 outbound
+# requests against a 50-subrequest limit on Workers' free plan, takes ~10
+# minutes, and needs a filesystem for its cache. So it runs here, and only its
+# output - a handful of static JSON files - goes to Pages.
+on:
+  schedule:
+    - cron: "0 */3 * * *"
+  workflow_dispatch:
+
+# Two runs writing the same snapshot file would race, and a slow one should
+# not be cut short by the next tick.
+concurrency:
+  group: collect
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # The chain cache is what keeps a run affordable: holder reads, deployers
+      # and logos are remembered so only new tokens cost anything. It is
+      # derived data, so a cache miss is slow rather than wrong.
+      #
+      # The key rotates per run and restore-keys falls back to the newest
+      # earlier one, because GitHub cache entries are immutable - a fixed key
+      # would be written once and never updated again.
+      - name: Restore chain cache
+        uses: actions/cache@v4
+        with:
+          path: data/chain-cache.json
+          key: chain-cache-${{ github.run_id }}
+          restore-keys: chain-cache-
+
+      - name: Collect
+        env:
+          BLOCKSCOUT_API_KEY: ${{ secrets.BLOCKSCOUT_API_KEY }}
+          RHC_RPC_URL: ${{ secrets.RHC_RPC_URL }}
+        run: npm run once
+
+      # Snapshots are the history the trend strip draws, so unlike the cache
+      # they have to survive properly. storage.js caps the file, so this stays
+      # bounded rather than growing forever.
+      - name: Commit snapshots
+        run: |
+          git config user.name "alphet-collector"
+          git config user.email "actions@github.com"
+          git add data/snapshots.json
+          git diff --staged --quiet || git commit -m "reading $(date -u +%Y-%m-%dT%H:%MZ)"
+          git push
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy public --project-name=alphet
