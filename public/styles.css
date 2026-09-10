@@ -486,6 +486,15 @@ h1 {
 .trend-alpha { background: linear-gradient(180deg, var(--alpha-mid), var(--alpha-deep)); }
 .trend-beta { background: linear-gradient(180deg, var(--beta-deep), var(--beta-mid)); flex: 1; }
 .trend-time { font-family: var(--mono); font-size: 9.5px; color: var(--dim); }
+
+/* Where the strip crosses midnight. The columns are labelled by hour, so at
+   thirty-six of them the strip can span more than a week and "8 AM" comes
+   round again and again - without this, a new day reads as the next hour. */
+.trend-daybreak {
+  border-left: 1px solid var(--line);
+  padding-left: 5px;
+  margin-left: 3px;
+}
 .trend-empty { padding: 22px 16px; color: var(--dim); font-size: 13px; }
 
 /* ============================================================

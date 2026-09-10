@@ -133,6 +133,18 @@
     return d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
   }
 
+  function dayLabel(iso) {
+    var d = new Date(iso);
+    if (isNaN(d)) return "";
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  }
+
+  // "8 AM", not "8:56 AM": the column stands for the hour, not for the minute
+  // the collector happened to finish in.
+  function hourLabel(date) {
+    return date.toLocaleTimeString("en-US", { hour: "numeric" });
+  }
+
   // A score's colour is its side: anything at or above the cutoff is Alpha.
   function scoreColor(score) {
     if (score === null || score === undefined) return "var(--dim)";
@@ -298,6 +310,51 @@
     });
   }
 
+  /**
+   * One column per hour, rather than one per run.
+   *
+   * The collector runs whenever it is asked to, and a morning of manual runs
+   * produced 8:56, 9:12, 9:24 and 9:59 as four separate columns - a log,
+   * rather than a chart. Grouping by the hour a reading falls in fixes the
+   * axis without inventing anything: each bar is still one reading that
+   * actually happened, the last one taken in that hour.
+   *
+   * Deliberately not an average. Consecutive readings are 24h-window
+   * measurements taken minutes apart, so they overlap almost entirely -
+   * averaging them would put the bar at a number the gauge never showed while
+   * barely changing its height.
+   */
+  function byHour(series) {
+    var order = [];
+    var index = {};
+
+    series.forEach(function (snap) {
+      var d = new Date(snap.timestamp);
+      if (isNaN(d)) return;
+      d.setMinutes(0, 0, 0);
+
+      // Keyed on the full hour, not the hour of the day, so the same clock
+      // hour on two different days stays two columns.
+      var key = d.getTime();
+      if (!index[key]) {
+        index[key] = { hour: d, snaps: [] };
+        order.push(index[key]);
+      }
+      index[key].snaps.push(snap);
+    });
+
+    order.sort(function (a, b) { return a.hour - b.hour; });
+
+    return order.map(function (bucket) {
+      // A measured reading beats a backfilled one sharing its hour, and a
+      // later measured reading beats an earlier one.
+      var measured = bucket.snaps.filter(function (s) { return !s.backfilled; });
+      var pool = measured.length ? measured : bucket.snaps;
+
+      return { hour: bucket.hour, snap: pool[pool.length - 1], count: bucket.snaps.length };
+    });
+  }
+
   function renderTrend() {
     var host = $("trend");
     host.textContent = "";
@@ -312,16 +369,30 @@
       return;
     }
 
-    series = series.slice(-36);
+    var hours = byHour(series).slice(-36);
 
-    var measured = series.filter(function (s) { return !s.backfilled; }).length;
-    var filled = series.length - measured;
-    $("trendMeta").textContent = filled
-      ? measured + " measured · " + filled + " backfilled"
-      : measured + " reading" + (measured === 1 ? "" : "s");
+    var readings = hours.reduce(function (sum, h) { return sum + h.count; }, 0);
+    var filled = hours.filter(function (h) { return h.snap.backfilled; }).length;
 
-    series.forEach(function (snap) {
-      var col = el("div", "trend-col" + (snap.backfilled ? " trend-filled" : ""));
+    // Both numbers, when they differ. "10 hours" alone would look like the
+    // collector had run ten times, which is the thing the grouping hides.
+    var meta = [hours.length + " hour" + (hours.length === 1 ? "" : "s")];
+    if (readings > hours.length) meta.push(readings + " readings");
+    if (filled) meta.push(filled + " backfilled");
+    $("trendMeta").textContent = meta.join(" · ");
+
+    var lastDay = null;
+
+    hours.forEach(function (entry) {
+      var snap = entry.snap;
+      var day = entry.hour.toDateString();
+      var dayBreak = lastDay !== null && day !== lastDay;
+      lastDay = day;
+
+      var col = el("div", "trend-col" +
+        (snap.backfilled ? " trend-filled" : "") +
+        (dayBreak ? " trend-daybreak" : ""));
+
       var bar = el("div", "trend-bar");
 
       var a = el("div", "trend-alpha");
@@ -330,13 +401,15 @@
       bar.appendChild(el("div", "trend-beta"));
 
       col.title =
-        snap.verdict.label + " — Alpha " + snap.alphaWeight.toFixed(1) + "% at " + timeLabel(snap.timestamp) +
+        snap.verdict.label + " — Alpha " + snap.alphaWeight.toFixed(1) + "%" +
+        "\nRead at " + dayLabel(snap.timestamp) + ", " + timeLabel(snap.timestamp) +
+        (entry.count > 1 ? " (last of " + entry.count + " readings this hour)" : "") +
         (snap.backfilled
           ? "\nBackfilled: today's quality scores re-weighted by this hour's volume. Not a measurement."
           : "");
 
       col.appendChild(bar);
-      col.appendChild(el("div", "trend-time", timeLabel(snap.timestamp)));
+      col.appendChild(el("div", "trend-time", hourLabel(entry.hour)));
       host.appendChild(col);
     });
 
