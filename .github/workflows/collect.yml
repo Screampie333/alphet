@@ -66,8 +66,46 @@ jobs:
           git config user.name "alphet-collector"
           git config user.email "actions@github.com"
           git add data/snapshots.json
-          git diff --staged --quiet || git commit -m "reading $(date -u +%Y-%m-%dT%H:%MZ)"
-          git push
+
+          if git diff --staged --quiet; then
+            echo "  no new reading to commit"
+            exit 0
+          fi
+
+          git commit -m "reading $(date -u +%Y-%m-%dT%H:%MZ)"
+
+          # main moves while we are collecting, and this job holds a checkout
+          # for half an hour. Pushing the site is now a one-command operation
+          # that deploys in thirty seconds, so an ordinary CSS edit during a
+          # collection window is enough to make this push stale.
+          #
+          # Without the rebase it simply lost: on 2026-09-11 the 02:52 run
+          # collected for 35 minutes, spent its Blockscout credits, and died on
+          # "! [rejected] (fetch first)". The failure took the deploy and the
+          # cache save down with it, so the entire run produced nothing.
+          #
+          # The rebase is clean by construction: this commit touches only
+          # data/snapshots.json, nothing else in the repo writes to that file,
+          # and the concurrency group above stops two collection runs
+          # overlapping. It is replaying one commit over unrelated ones.
+          set +e
+          for attempt in 1 2 3; do
+            git pull --rebase --autostash origin main && git push
+            if [ $? -eq 0 ]; then
+              echo "  snapshot pushed"
+              exit 0
+            fi
+            echo "  push attempt $attempt was rejected; refetching"
+            sleep 5
+          done
+
+          # Deliberately not fatal. public/api was already written on this
+          # runner, so the deploy below still puts the new reading on the site
+          # - only the durable history entry is missing. Failing here would
+          # throw away a reading that is otherwise intact, which is the
+          # mistake being fixed, not a smaller version of it.
+          echo "::warning::snapshot commit could not be pushed after 3 attempts - the reading still deploys, but it is not in history"
+          exit 0
 
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
