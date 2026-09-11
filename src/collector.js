@@ -639,6 +639,20 @@ function recordVerdicts(pools) {
  * let a transfer through and still take the exit away, and a contract that can
  * be flipped by its owner passes right up until it is flipped.
  */
+/**
+ * Bumped whenever the rules below change what "blocked" means.
+ *
+ * Honeypot verdicts are cached with the rest of a token's slow-moving reads,
+ * for thirty days - so without this, a verdict reached by a previous version
+ * of these rules outlives the fix by a month. That was tolerable while the
+ * flag only nudged one metric of four. It is not tolerable now that a blocked
+ * verdict forces a token to the Beta side on its own.
+ *
+ *   1 - every error read as a honeypot, transport failures included
+ *   2 - only a revert the node actually evaluated counts
+ */
+export const HONEYPOT_LOGIC_VERSION = 2;
+
 export async function checkHoneypot(tokenAddress, destination, holder, balance) {
   if (!holder || !balance || balance === 0n) {
     return { blocked: false, reason: "no holder to test from", tested: false };
@@ -670,7 +684,34 @@ export async function checkHoneypot(tokenAddress, destination, holder, balance) 
     }
     return { blocked: false, reason: "sell simulated ok", tested: true };
   } catch (err) {
-    return { blocked: true, reason: err.message.slice(0, 120), tested: true };
+    const message = err.message || "";
+
+    // Only a revert says anything about the token. Everything else that lands
+    // here - a timeout, a 429, a dropped connection, a node refusing the
+    // request - is a fact about our connection, and calling it a failed sell
+    // is the same mistake this project has now made three times: treating a
+    // measurement that did not happen as a measurement that came back bad.
+    //
+    // It matters more than it used to. This flag now forces a token to the
+    // Beta side on its own, so a rate-limited run could otherwise convict a
+    // third of the board on nothing.
+    //
+    // The test is deliberately narrow: the node has to have evaluated the
+    // call (RPC eth_call:) AND said the execution itself failed. Anything we
+    // do not positively recognise reads as untested, which neither rescues a
+    // bad token nor sinks a good one.
+    const evaluated = /^RPC eth_call:/.test(message);
+    const reverted = /revert|VM Exception|invalid opcode|out of gas/i.test(message);
+
+    if (evaluated && reverted) {
+      return { blocked: true, reason: message.slice(0, 120), tested: true };
+    }
+
+    return {
+      blocked: false,
+      reason: "sell could not be simulated: " + message.slice(0, 90),
+      tested: false,
+    };
   }
 }
 
@@ -767,6 +808,36 @@ async function readToken(pool, ctx) {
 
   if (reuse) {
     ({ holders, liquidity, honeypot, dev } = reuse);
+
+    // The expensive half of a cached read - holders, liquidity, the deployer -
+    // is unaffected by a change to the honeypot rules, so only the honeypot is
+    // re-tested. One eth_call against a token whose verdict was reached under
+    // rules we no longer trust, rather than throwing away a holder enumeration
+    // that cost far more to obtain.
+    // Only a guilty verdict needs revisiting. Version 2 blocks a strict
+    // subset of what version 1 blocked - it removed reasons, it added none -
+    // so anything the old rules cleared, the new rules clear too. Re-testing
+    // those as well would cost two calls on every one of ~835 cached tokens
+    // to confirm answers that cannot have changed.
+    if ((reuse.hpVersion || 1) < HONEYPOT_LOGIC_VERSION && honeypot?.blocked) {
+      const stale = holders?.topHolders?.[0];
+      const staleBalanceHex = stale
+        ? await call(pool.address, calldata(SELECTOR.balanceOf, encodeAddress(stale.address)))
+        : null;
+
+      honeypot = await checkHoneypot(
+        pool.address,
+        pool.poolAddress,
+        stale?.address,
+        staleBalanceHex ? readUint(staleBalanceHex) : 0n
+      );
+
+      storeRead(pool.address, {
+        ...reuse,
+        honeypot,
+        hpVersion: HONEYPOT_LOGIC_VERSION,
+      });
+    }
   } else {
     // Sequential rather than Promise.all. Both are chains of batched calls,
     // and the RPC gate serialises them anyway - running them "concurrently"
@@ -811,7 +882,13 @@ async function readToken(pool, ctx) {
     );
 
     if (dev) loadCache().deployers[pool.address] = dev;
-    storeRead(pool.address, { holders, liquidity, honeypot, dev: dev || null });
+    storeRead(pool.address, {
+      holders,
+      liquidity,
+      honeypot,
+      hpVersion: HONEYPOT_LOGIC_VERSION,
+      dev: dev || null,
+    });
   }
 
   // Recomputed every run even when the reads are reused: it is a local lookup

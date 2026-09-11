@@ -130,7 +130,8 @@ export function scoreRugSignals(token, windowKey = "h24") {
   const activity = token.activity.windows?.[windowKey] || token.activity;
 
   // A token you cannot sell is not a risky investment, it is not an
-  // investment. Nothing else on the board can outvote this.
+  // investment. This zeroes the metric; scoreToken is what stops the other
+  // three outvoting it, because zeroing one weight of four never could.
   if (hp.blocked) {
     return { score: 0, signals: { volumePerHolder: 0, buyPressure: 0, exit: 0 }, bad: 3 };
   }
@@ -206,6 +207,7 @@ function round(value) {
 export function scoreToken(token, windowKey = "h24") {
   const rug = scoreRugSignals(token, windowKey);
   const activity = token.activity.windows?.[windowKey] || token.activity;
+  const honeypot = Boolean(token.honeypot?.blocked);
 
   const scores = {
     holderDistribution: round(scoreHolderDistribution(token)),
@@ -222,11 +224,29 @@ export function scoreToken(token, windowKey = "h24") {
   const measured = METRIC_KEYS.filter((key) => scores[key] !== null);
   const totalWeight = measured.reduce((sum, key) => sum + w[key], 0);
 
-  const quality = totalWeight > 0
+  let quality = totalWeight > 0
     ? Math.round(
         clamp(measured.reduce((sum, key) => sum + scores[key] * w[key], 0) / totalWeight)
       )
     : null;
+
+  // A simulated sell that reverted overrides the arithmetic entirely.
+  //
+  // scoreRugSignals already returns 0 for these, and the comment there used to
+  // claim nothing could outvote it. That was simply wrong: rug signals carry
+  // 20% of the weight, so the other three metrics kept 80% and BRIAN - spread
+  // supply, burnt liquidity, $11M of volume - scored 65 and landed on the
+  // Alpha side while flagged as a token you cannot sell out of.
+  //
+  // No arrangement of the other three can rescue that. Supply distribution
+  // describes who is holding the bag, not whether you can put it down, and a
+  // permanently locked pool you cannot sell into is a wall rather than a
+  // floor. So the verdict is set here, above the weighted mean, rather than
+  // by trying to pick weights that happen to land below the cutoff.
+  //
+  // Only `blocked` does this, never an untested one - see checkHoneypot,
+  // which now reports a sell it could not simulate as unknown.
+  if (quality !== null && honeypot) quality = 0;
 
   return {
     address: token.address,
@@ -242,7 +262,7 @@ export function scoreToken(token, windowKey = "h24") {
     holderCount: token.holders.holderCount,
     holderCountIsFloor: Boolean(token.holders.capped),
     top10Percent: token.holders.top10Percent,
-    honeypot: Boolean(token.honeypot?.blocked),
+    honeypot,
     scores,
     unmeasured: METRIC_KEYS.filter((key) => scores[key] === null),
     // Either flag means the holder count is a floor: the time window was
