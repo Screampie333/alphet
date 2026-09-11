@@ -1031,6 +1031,7 @@
     Shell.initDrawer();
     Shell.initContractCopy();
     Shell.initScrollSpy("#nav .nav-item");
+    Shell.initCleanLinks('.sidebar a[href^="#"], .main a[href^="#"]');
   }
 
   renderTicks();

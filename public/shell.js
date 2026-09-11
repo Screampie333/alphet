@@ -84,6 +84,42 @@ window.AlphetShell = (function () {
   // Light up whichever nav item points at the section currently in view.
   // `selector` picks the item set, so the dashboard can drive its sidebar and
   // the docs page its table of contents with the same code.
+  /**
+   * In-page navigation without leaving "#gauge" sitting in the address bar.
+   *
+   * The sidebar links are ordinary anchors, so the browser writes their target
+   * into the URL on click. That is right for a document and wrong for this:
+   * every section is on the one page, so the hash names where you happen to be
+   * scrolled rather than where you are, and it stays there afterwards.
+   *
+   * A hash that ARRIVES in the URL is still honoured - the browser has already
+   * jumped by the time this runs, and a link someone was sent should land
+   * where it says. Only hashes this page would write itself are suppressed.
+   */
+  function initCleanLinks(selector) {
+    document.querySelectorAll(selector).forEach((link) => {
+      link.addEventListener("click", (event) => {
+        const id = (link.getAttribute("href") || "").slice(1);
+        const target = id && document.getElementById(id);
+        if (!target) return;
+
+        // Modified clicks are the user asking for a new tab or a download.
+        if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;
+
+        event.preventDefault();
+
+        // html { scroll-behavior: smooth } already applies, and honouring
+        // prefers-reduced-motion is its job rather than this one's.
+        target.scrollIntoView();
+
+        // replaceState rather than pushState: these are not separate pages, so
+        // adding history entries would make Back walk up the sidebar instead
+        // of leaving the site.
+        history.replaceState(null, "", location.pathname + location.search);
+      });
+    });
+  }
+
   function initScrollSpy(selector) {
     const items = [...document.querySelectorAll(selector)];
     const sections = items
@@ -106,5 +142,5 @@ window.AlphetShell = (function () {
     sections.forEach((section) => spy.observe(section));
   }
 
-  return { CONTRACT_ADDRESS, initDrawer, initContractCopy, initScrollSpy };
+  return { CONTRACT_ADDRESS, initDrawer, initContractCopy, initScrollSpy, initCleanLinks };
 })();
