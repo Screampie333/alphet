@@ -179,7 +179,6 @@ h1, h2, h3 { margin: 0; line-height: 1.15; letter-spacing: -0.02em; }
 }
 
 .sidebar-body { flex: 1; overflow-y: auto; padding: 16px 12px; }
-.sidebar-foot { padding: 12px; border-top: 1px solid var(--line); }
 
 .nav-group { margin-bottom: 22px; }
 
@@ -234,23 +233,6 @@ h1, h2, h3 { margin: 0; line-height: 1.15; letter-spacing: -0.02em; }
 .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--dim); flex: none; }
 .dot.live { background: var(--rhc); box-shadow: 0 0 0 3px var(--alpha-soft); }
 
-.btn-cta {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  width: 100%;
-  padding: 11px;
-  border: 0;
-  border-radius: 10px;
-  background: linear-gradient(100deg, var(--alpha), var(--beta));
-  color: var(--bg);
-  font-family: inherit;
-  font-size: 14px;
-  font-weight: 700;
-  cursor: pointer;
-}
-.btn-cta svg { width: 16px; height: 16px; }
 
 /* ============================================================
    LAYOUT
