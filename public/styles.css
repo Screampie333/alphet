@@ -392,6 +392,38 @@ h1 {
 .verdict-summary { color: var(--muted); max-width: 68ch; margin: 8px 0 0; }
 
 /* ============================================================
+   SAMPLE READINGS
+   ============================================================ */
+
+.samples { margin-top: 26px; }
+.samples-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--dim);
+  margin-bottom: 8px;
+}
+.samples-row { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.sample-btn {
+  padding: 7px 13px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+.sample-btn:hover { color: var(--ink); border-color: #34343f; }
+.sample-btn.active { background: var(--ink); color: var(--bg); border-color: var(--ink); font-weight: 700; }
+.sample-btn.live-btn.active { background: var(--rhc); border-color: var(--rhc); }
+
+/* ============================================================
    CARDS
    ============================================================ */
 
