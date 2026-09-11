@@ -15,18 +15,14 @@
 
       seam 2.6 -> 4.5    brows 2.3 -> 3.4    scrollwork 1.7 -> 2.6
 
-    And there is a plate, but only on light backgrounds. Half the mark is
-    white, so on a light tab bar that half disappears into it. The sidebar
-    never has this problem because the page behind it is always dark - which
-    is also why the plate is hidden under a dark scheme, leaving exactly the
-    sidebar's mark and nothing else.
-  -->
-  <style>
-    .plate { fill: #0b0809 }
-    @media (prefers-color-scheme: dark) { .plate { display: none } }
-  </style>
+    The background is transparent, so this is the sidebar's mark and nothing
+    else - no plate, no inset, no second version of the logo to keep in sync.
 
-  <rect class="plate" width="100" height="100" rx="22"/>
+    The cost is real and accepted: half the mark is white, so against a light
+    tab bar that half reads as a gap rather than as a shape. A plate fixed
+    that but made the icon look like a badge next to a bare mark, and being
+    the same logo everywhere was worth more.
+  -->
 
   <defs>
     <path id="h"
