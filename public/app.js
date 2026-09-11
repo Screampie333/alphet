@@ -86,7 +86,6 @@
     live: false,
     timeframe: "h24",
     tokenPage: 0,
-    sample: null,
   };
 
   // --------------------------------------------------------------
@@ -153,7 +152,7 @@
 
 
   // --------------------------------------------------------------
-  // DEMO + SAMPLE READINGS
+  // DEMO READING
   // --------------------------------------------------------------
 
   // A believable reading centred on a target Alpha share. Used for the design
@@ -223,21 +222,12 @@
     return { key: "beta-heavy", label: "Beta-heavy", summary: "Almost all the money is on the Beta side. Devs hold the float and can pull the pool." };
   }
 
-  var SAMPLES = [
-    { id: "live", label: "Live reading" },
-    { id: "alpha-heavy", label: "Alpha-heavy", weight: 78 },
-    { id: "alpha-lean", label: "Alpha lean", weight: 59 },
-    { id: "balanced", label: "Balanced", weight: 49.5 },
-    { id: "beta-lean", label: "Beta lean", weight: 39 },
-    { id: "beta-heavy", label: "Beta-heavy", weight: 17 },
-  ];
-
   // --------------------------------------------------------------
   // RENDER: GAUGE
   // --------------------------------------------------------------
 
   function currentSnapshot() {
-    return state.sample ? state.sample : state.snapshot;
+    return state.snapshot;
   }
 
   function renderGauge() {
@@ -291,33 +281,6 @@
       tick.style.left = at + "%";
       tick.appendChild(el("span", null, at));
       host.appendChild(tick);
-    });
-  }
-
-  function renderSamples() {
-    var host = $("samplesRow");
-    host.textContent = "";
-
-    SAMPLES.forEach(function (sample) {
-      var btn = el("button", "sample-btn", sample.label);
-      btn.type = "button";
-      if (sample.id === "live") btn.className += " live-btn";
-
-      var isActive = sample.id === "live" ? !state.sample : state.sample && state.sample.sampleId === sample.id;
-      if (isActive) btn.className += " active";
-
-      btn.addEventListener("click", function () {
-        if (sample.id === "live") {
-          state.sample = null;
-        } else {
-          var snap = demoSnapshot(sample.weight);
-          snap.sampleId = sample.id;
-          state.sample = snap;
-        }
-        renderAll();
-      });
-
-      host.appendChild(btn);
     });
   }
 
@@ -938,13 +901,6 @@
     var text = $("statusText");
     var foot = $("footNote");
 
-    if (state.sample) {
-      dot.className = "dot";
-      text.textContent = "Preview reading";
-      foot.textContent = "You're looking at a preview reading, not a measurement. Press “Live reading” to go back to the feed.";
-      return;
-    }
-
     if (state.live && !snap.demo) {
       dot.className = "dot live";
       var source = (snap.raw && snap.raw.source) || "live";
@@ -967,7 +923,6 @@
 
   function renderAll() {
     renderGauge();
-    renderSamples();
     renderMetrics();
     renderTimeframes();
     renderTokens();
