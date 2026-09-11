@@ -1,0 +1,81 @@
+name: Deploy site
+
+# Frontend changes, live in about a minute.
+#
+# WHY THIS IS SEPARATE FROM collect.yml
+#
+# collect.yml also deploys, but only after collecting - and collecting takes
+# half an hour, spends Blockscout credits, and runs on a six-hourly cron that
+# GitHub delivers late (the 00:00 UTC run on 2026-09-11 fired at 02:52). So a
+# CSS edit pushed at the wrong moment waited up to nine hours to appear, which
+# makes iterating on the design impossible.
+#
+# This job runs no collector. It rebuilds the four API files from the snapshots
+# already committed in the repo - publish.js is pure disk work, no network and
+# no keys - and uploads public/. Under a minute, and the only secret it needs
+# is the Pages token.
+on:
+  push:
+    branches: [main]
+    # Only what actually changes the deployed site. A change to the scoring or
+    # the collector alters future readings, and those reach the site through
+    # collect.yml when it next runs - deploying for them would upload an
+    # identical page.
+    #
+    # This also keeps the workflow off the collector's own snapshot commits.
+    # GitHub already suppresses workflow triggers from a GITHUB_TOKEN push, so
+    # that is belt and braces, but it states the intent.
+    paths:
+      - "public/**"
+      - "src/publish.js"
+      - ".github/workflows/deploy.yml"
+  workflow_dispatch:
+
+# Newest push wins. Unlike a collection run, a superseded deploy is worth
+# nothing - if two land together the older one is uploading a page that has
+# already been edited again, so cancelling it is the correct outcome rather
+# than a compromise.
+concurrency:
+  group: deploy
+  cancel-in-progress: true
+
+# Read-only. This job never commits, which is what makes it safe to run
+# alongside collect.yml: the two write to different places, and only one of
+# them writes to the repo at all.
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Matches collect.yml deliberately. The two jobs both run publish.js, and
+      # a version skew between them could produce API files that differ for
+      # reasons nobody would think to look for.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Rebuild the API from committed snapshots
+        run: |
+          # public/api is generated, not committed, so it has to be rebuilt
+          # here or the deploy would upload a site with no data at all.
+          #
+          # The pull narrows a real but small race: if a collection run commits
+          # a new reading between this job's checkout and its upload, deploying
+          # the older checkout would put stale data back on the site. Worst
+          # case it self-corrects at the next collection, but it costs one
+          # command to mostly avoid.
+          git pull --ff-only origin main || echo "  could not fast-forward; deploying the checked-out commit"
+          npm run publish
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy public --project-name=alphet
