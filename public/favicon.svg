@@ -1,17 +1,26 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
   <!--
-    The tab icon: the Alphet mark, stripped back to what survives 16 pixels.
+    The tab icon: the same mark the sidebar and the gauge badge draw.
 
-    The full mark carries brows, an eye, scrollwork and a cut gem, and every
-    one of those is drawn with strokes 1.7-2.6 units wide against this same
-    100-unit viewBox. At 16px that is a third of a device pixel. They would
-    not read as detail, they would read as dirt on the lime.
+    It is not a copy of those paths at their own weights, and it cannot be.
+    The mark's linework is 1.7 to 2.6 units wide against this 100-unit
+    viewBox, which is a third of a device pixel in a 16px tab slot - at that
+    width a line does not render thin, it renders as grey haze. Reproducing
+    the numbers faithfully is exactly how you end up with a different-looking
+    icon.
 
-    So this is the split alone - which is the part that means something
-    anyway: lime Alpha, white Beta, and the seam between them.
+    So every stroke is thickened for this size, and only for this size:
 
-    The dark plate is not decoration either. Half the mark is white, so on a
-    light tab bar an unplated icon would lose that half entirely.
+      seam        2.6 -> 4.5    the split is the whole point of the mark
+      brows       2.3 -> 3.4
+      scrollwork  1.7 -> 2.6
+      eye         4.4 -> 5.2    (radius)
+
+    Same shapes, same colours, same composition. Heavier pen, because the
+    canvas is a hundredth of the size.
+
+    The dark plate stays: half the mark is white, so without it that half
+    disappears against a light tab bar.
   -->
   <rect width="100" height="100" rx="22" fill="#0b0809"/>
 
@@ -22,17 +31,41 @@
     <clipPath id="c"><use href="#h"/></clipPath>
   </defs>
 
-  <!-- Scaled to 0.87 about the heart's own centre (50, 49) rather than the
-       canvas centre, so the plate's padding is even top and bottom. -->
-  <g transform="translate(50 50) scale(0.87) translate(-50 -49)">
+  <!-- Scaled about the heart's own centre (50, 49) rather than the canvas
+       centre, so the plate's padding is even top and bottom. -->
+  <g transform="translate(50 50) scale(0.9) translate(-50 -49)">
     <use href="#h" fill="#ccff00"/>
+
     <g clip-path="url(#c)">
       <path d="M49 4 C 44 24, 61 38, 58 52 C 55 67, 44 74, 51 94 L 102 94 L 102 4 Z"
             fill="#ffffff"/>
-      <!-- Wider than the mark's own seam: 3 units would land on half a device
-           pixel at tab size and grey out, taking the split with it. -->
+
+      <!-- the shaded lower lobe on the Beta side -->
+      <path d="M58 52 C 55 67, 44 74, 51 94 L 102 94 L 102 56 Z"
+            fill="#b6b2c0" opacity="0.5"/>
+
+      <!-- Alpha side: three brow strokes over a plain open eye -->
+      <g stroke="#12121a" stroke-width="3.4" fill="none" stroke-linecap="round">
+        <path d="M14 23 Q 29 15, 44 22"/>
+        <path d="M10 34 Q 27 26, 45 33"/>
+        <path d="M10 46 Q 27 54, 44 47"/>
+      </g>
+      <circle cx="28" cy="38" r="5.2" fill="#ffffff"/>
+      <circle cx="29" cy="38.4" r="2.3" fill="#12121a"/>
+
+      <!-- Beta side: scrollwork over a cut-gem eye -->
+      <g stroke="#12121a" stroke-width="2.6" fill="none" stroke-linecap="round">
+        <path d="M66 24 C 71 16, 80 18, 78 25 C 76 31, 68 30, 70 23"/>
+        <path d="M82 21 C 89 18, 93 25, 88 29 C 84 32, 80 28, 83 25"/>
+        <path d="M62 32 C 72 27, 85 32, 88 40 C 90 48, 84 54, 77 51"/>
+        <path d="M64 45 C 61 53, 67 60, 75 57"/>
+        <path d="M73 47 C 74 58, 66 63, 63 71 C 60 79, 66 84, 71 80"/>
+      </g>
+      <path d="M72 33 L78 38 L75 46 L68 46 L65 38 Z"
+            fill="#d6d2de" stroke="#12121a" stroke-width="2.6" stroke-linejoin="round"/>
+
       <path d="M49 4 C 44 24, 61 38, 58 52 C 55 67, 44 74, 51 94"
-            fill="none" stroke="#0b0809" stroke-width="5.5"/>
+            fill="none" stroke="#0b0809" stroke-width="4.5"/>
     </g>
   </g>
 </svg>
