@@ -162,8 +162,11 @@
         </div>
       </div>
 
-      <!-- sample readings: preview each state without waiting for one -->
-      <div class="samples">
+      <!-- Sample readings: preview each state without waiting for one.
+           Hidden for now. SHOW_PREVIEW in app.js is the only switch;
+           this starts hidden too so the buttons never flash on screen
+           before the script has decided. -->
+      <div class="samples" id="samplesBlock" hidden>
         <span class="samples-label">Preview a reading</span>
         <div class="samples-row" id="samplesRow"></div>
       </div>

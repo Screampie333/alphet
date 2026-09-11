@@ -54,6 +54,17 @@
     { key: "beta-heavy", label: "Beta-heavy", range: "0 – 34", color: "var(--beta)", note: "Almost everything moving is on the Beta side." },
   ];
 
+  // Whether the preview buttons are shown.
+  //
+  // They swap the live gauge for an invented reading at a chosen Alpha
+  // weight. That is genuinely useful for seeing the four verdicts without
+  // waiting days for the market to produce them, and it sits awkwardly on a
+  // page whose whole claim is that it measures things.
+  //
+  // Hidden rather than deleted: everything behind it still works, and this
+  // line is the only switch. Flip it to true and the row comes back.
+  var SHOW_PREVIEW = false;
+
   // Rows per page in the token table.
   var PAGE_SIZE = 25;
 
@@ -295,6 +306,13 @@
   }
 
   function renderSamples() {
+    // The block is hidden in the markup as well, so this only ever has to
+    // reveal it - there is no moment where the buttons are visible and
+    // should not be.
+    var block = $("samplesBlock");
+    if (block) block.hidden = !SHOW_PREVIEW;
+    if (!SHOW_PREVIEW) return;
+
     var host = $("samplesRow");
     host.textContent = "";
 
