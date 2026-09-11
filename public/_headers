@@ -1,0 +1,28 @@
+# Cloudflare Pages reads this file to set response headers.
+#
+# WHY IT EXISTS
+#
+# Pages caches static assets at the edge with `s-maxage=604800` - seven days.
+# That is right for a stylesheet and completely wrong for the readings: on
+# 2026-09-11 the live site served the 02:30 reading for nearly ten hours,
+# through three deployments, because the edge had a copy and never went back
+# for a new one. The page looked like it updated every six hours. It did not.
+#
+# It also hid a real failure. A broken deploy uploaded a build with no api/ at
+# all, and nobody could tell, because the edge kept answering from the copy it
+# already had.
+#
+# Two minutes is the compromise: readings change every six hours, so almost
+# every visitor still gets a cached file, but a new reading is visible within
+# two minutes of deploying rather than within a week.
+/api/*
+  Cache-Control: public, max-age=60, s-maxage=120
+
+# Everything else keeps Pages' own caching. index.html is the one to be careful
+# with - it is what loads app.js, so a stale copy can pin a visitor to an old
+# frontend even after a deploy.
+/
+  Cache-Control: public, max-age=0, must-revalidate
+
+/index.html
+  Cache-Control: public, max-age=0, must-revalidate

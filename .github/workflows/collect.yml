@@ -107,6 +107,23 @@ jobs:
           echo "::warning::snapshot commit could not be pushed after 3 attempts - the reading still deploys, but it is not in history"
           exit 0
 
+      # A deploy replaces the whole site, so uploading a build with no api/ in
+      # it does not leave the old data in place - it removes it. public/api is
+      # generated and gitignored, so a checkout where the collector did not
+      # finish has no data at all, and shipping that is strictly worse than
+      # shipping nothing.
+      #
+      # run.js now exits non-zero when collection fails, which stops the job
+      # before this. This is the second lock on the same door: the one thing
+      # that must never happen is worth checking for directly.
+      - name: Refuse to deploy an empty build
+        run: |
+          if [ ! -s public/api/latest.json ]; then
+            echo "::error::public/api/latest.json is missing or empty - refusing to deploy a site with no data"
+            exit 1
+          fi
+          echo "  public/api present ($(ls public/api | wc -l) files)"
+
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
         with:

@@ -69,8 +69,20 @@ async function tick() {
 
     return snapshot;
   } catch (err) {
-    // Never crash the loop - a failed pull should just be skipped.
+    // Never crash the LOOP - a failed pull is skipped and the next tick tries
+    // again. But a one-shot run has no next tick, and something is waiting on
+    // its exit code.
     console.error(`\n  collection failed: ${err.message}\n`);
+
+    // On 2026-09-11 the 10:33 scheduled run hit "GeckoTerminal returned HTTP
+    // 504" in discovery, printed this line, and exited 0. GitHub read that as
+    // success and carried on to deploy - uploading a public/ with no api/ in
+    // it, because those files are generated and a fresh checkout has none.
+    // A working site was replaced with an empty one by a run that failed.
+    //
+    // Swallowing the error is right for the daemon and wrong for --once, so
+    // the exit code now says which happened.
+    if (runOnce) process.exitCode = 1;
     return null;
   }
 }

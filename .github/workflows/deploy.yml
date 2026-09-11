@@ -73,6 +73,17 @@ jobs:
           git pull --ff-only origin main || echo "  could not fast-forward; deploying the checked-out commit"
           npm run publish
 
+      # Same reason as in collect.yml: a deploy replaces the site, so a build
+      # missing its data files would take the readings down rather than leave
+      # them alone.
+      - name: Refuse to deploy an empty build
+        run: |
+          if [ ! -s public/api/latest.json ]; then
+            echo "::error::public/api/latest.json is missing or empty - refusing to deploy a site with no data"
+            exit 1
+          fi
+          echo "  public/api present ($(ls public/api | wc -l) files)"
+
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
         with:
