@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="1024" height="1024">
+  <!--
+    The Alphet mark, on its own and on a transparent background.
+    Lime is Alpha, white is Beta, and the wavy seam between them is the split
+    the whole product measures.
+
+    Stroke weights here are the mark's real ones - 1.7 to 2.6 against a
+    100-unit viewBox. The tab favicon uses heavier versions of the same
+    shapes, because at 16px these render as haze rather than as lines. Use
+    this file anywhere the mark will be drawn larger than about 64px.
+
+    Half the mark is white, so on a light background that half reads as a
+    gap. Use alphet-pfp.svg, which carries the dark plate, wherever the
+    background is not dark or not known - a profile picture, for instance.
+  -->
+  <defs>
+    <path id="h"
+          d="M50 89 C 19 68, 5 49, 5 33 C 5 18, 16 9, 29 9 C 38 9, 45 14, 50 21
+             C 55 14, 62 9, 71 9 C 84 9, 95 18, 95 33 C 95 49, 81 68, 50 89 Z"/>
+    <clipPath id="c"><use href="#h"/></clipPath>
+  </defs>
+
+  <use href="#h" fill="#ccff00"/>
+
+  <g clip-path="url(#c)">
+    <path d="M49 4 C 44 24, 61 38, 58 52 C 55 67, 44 74, 51 94 L 102 94 L 102 4 Z"
+          fill="#ffffff"/>
+
+    <!-- the shaded lower lobe on the Beta side -->
+    <path d="M58 52 C 55 67, 44 74, 51 94 L 102 94 L 102 56 Z"
+          fill="#b6b2c0" opacity="0.5"/>
+
+    <!-- Alpha side: three brow strokes over a plain open eye -->
+    <g stroke="#12121a" stroke-width="2.3" fill="none" stroke-linecap="round">
+      <path d="M14 23 Q 29 15, 44 22"/>
+      <path d="M10 34 Q 27 26, 45 33"/>
+      <path d="M10 46 Q 27 54, 44 47"/>
+    </g>
+    <circle cx="28" cy="38" r="4.4" fill="#ffffff"/>
+    <circle cx="29" cy="38.4" r="1.9" fill="#12121a"/>
+
+    <!-- Beta side: scrollwork over a cut-gem eye -->
+    <g stroke="#12121a" stroke-width="1.7" fill="none" stroke-linecap="round">
+      <path d="M66 24 C 71 16, 80 18, 78 25 C 76 31, 68 30, 70 23"/>
+      <path d="M82 21 C 89 18, 93 25, 88 29 C 84 32, 80 28, 83 25"/>
+      <path d="M62 32 C 72 27, 85 32, 88 40 C 90 48, 84 54, 77 51"/>
+      <path d="M64 45 C 61 53, 67 60, 75 57"/>
+      <path d="M73 47 C 74 58, 66 63, 63 71 C 60 79, 66 84, 71 80"/>
+    </g>
+    <path d="M72 33 L78 38 L75 46 L68 46 L65 38 Z"
+          fill="#d6d2de" stroke="#12121a" stroke-width="1.7" stroke-linejoin="round"/>
+
+    <path d="M49 4 C 44 24, 61 38, 58 52 C 55 67, 44 74, 51 94"
+          fill="none" stroke="#0b0809" stroke-width="2.6"/>
+  </g>
+</svg>
