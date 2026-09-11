@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!--
+    The tab icon: the Alphet mark, stripped back to what survives 16 pixels.
+
+    The full mark carries brows, an eye, scrollwork and a cut gem, and every
+    one of those is drawn with strokes 1.7-2.6 units wide against this same
+    100-unit viewBox. At 16px that is a third of a device pixel. They would
+    not read as detail, they would read as dirt on the lime.
+
+    So this is the split alone - which is the part that means something
+    anyway: lime Alpha, white Beta, and the seam between them.
+
+    The dark plate is not decoration either. Half the mark is white, so on a
+    light tab bar an unplated icon would lose that half entirely.
+  -->
+  <rect width="100" height="100" rx="22" fill="#0b0809"/>
+
+  <defs>
+    <path id="h"
+          d="M50 89 C 19 68, 5 49, 5 33 C 5 18, 16 9, 29 9 C 38 9, 45 14, 50 21
+             C 55 14, 62 9, 71 9 C 84 9, 95 18, 95 33 C 95 49, 81 68, 50 89 Z"/>
+    <clipPath id="c"><use href="#h"/></clipPath>
+  </defs>
+
+  <!-- Scaled to 0.87 about the heart's own centre (50, 49) rather than the
+       canvas centre, so the plate's padding is even top and bottom. -->
+  <g transform="translate(50 50) scale(0.87) translate(-50 -49)">
+    <use href="#h" fill="#ccff00"/>
+    <g clip-path="url(#c)">
+      <path d="M49 4 C 44 24, 61 38, 58 52 C 55 67, 44 74, 51 94 L 102 94 L 102 4 Z"
+            fill="#ffffff"/>
+      <!-- Wider than the mark's own seam: 3 units would land on half a device
+           pixel at tab size and grey out, taking the split with it. -->
+      <path d="M49 4 C 44 24, 61 38, 58 52 C 55 67, 44 74, 51 94"
+            fill="none" stroke="#0b0809" stroke-width="5.5"/>
+    </g>
+  </g>
+</svg>
