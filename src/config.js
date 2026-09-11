@@ -174,15 +174,26 @@ export const config = {
 
   // How many tokens per run may use the indexer, highest volume first.
   //
-  // Blockscout's free tier is 100,000 credits a month and every call costs 20
-  // - so 5,000 calls a month, total. A full run asking about every token spent
-  // 1,000 of them, a fifth of the month, in one go.
+  // This was 100, on a misreading of the dashboard: the budget looked like
+  // 100,000 credits a MONTH, so a full run at 20 credits a call seemed to
+  // spend a fifth of the month in one go. The dashboard actually says
+  // "renews in 1 hours", and the account was observed exhausted at 23:00 and
+  // answering normally again by 01:55. Whatever the exact window is, it is
+  // not a month.
   //
-  // The gauge is volume-weighted, so this costs very little: tokens outside
-  // the top of the book move the seam by almost nothing, and they still get
-  // the RPC path, which reports "not measurable" rather than guessing. Between
-  // this and the long cache, steady-state spend is only what new arrivals cost.
-  indexerTokenLimit: Number(process.env.INDEXER_TOKEN_LIMIT || 100),
+  // Keeping the old number would have broken the automated run outright,
+  // which is how the mistake surfaced. The tokens outside the limit do not
+  // go unmeasured - they fall back to replaying each token's Transfer log
+  // over RPC, and that was measured at 30.2 seconds per token against a
+  // 45-minute job timeout. 758 tokens on that path is 6.4 hours.
+  //
+  // A full cold run is roughly two calls a token: 858 tokens is ~1,700
+  // calls, ~34,000 credits, about a third of one period. The long read cache
+  // means steady-state spend is only what new arrivals cost.
+  //
+  // Note 0 does not mean "unlimited" here - it disables the indexer
+  // entirely, because the check is `rank < indexerTokenLimit`.
+  indexerTokenLimit: Number(process.env.INDEXER_TOKEN_LIMIT || 1000),
 
   // How many calls ride in one HTTP request, and the minimum gap between
   // requests. The public endpoint counts requests rather than the calls inside
