@@ -26,15 +26,3 @@
 
 /index.html
   Cache-Control: public, max-age=0, must-revalidate
-
-# The zone in front of alphet.xyz relabels this file as text/html - the body
-# arrives intact, but the header is wrong, and with x-content-type-options:
-# nosniff alongside it a browser refuses to draw it as an image. Served from
-# alphet.pages.dev it is image/svg+xml, so this only shows up once a custom
-# domain is in front of Pages.
-#
-# Declaring the type here states it at the origin rather than hoping the
-# default survives the trip.
-/favicon.svg
-  Content-Type: image/svg+xml
-  Cache-Control: public, max-age=3600
