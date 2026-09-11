@@ -1,28 +1,32 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
   <!--
-    The tab icon: the same mark the sidebar and the gauge badge draw.
+    The tab icon: the same mark the sidebar draws, on the same viewBox, with
+    the same paths in the same places. Nothing is scaled or inset, so the two
+    are geometrically identical.
 
-    It is not a copy of those paths at their own weights, and it cannot be.
-    The mark's linework is 1.7 to 2.6 units wide against this 100-unit
-    viewBox, which is a third of a device pixel in a 16px tab slot - at that
-    width a line does not render thin, it renders as grey haze. Reproducing
-    the numbers faithfully is exactly how you end up with a different-looking
-    icon.
+    TWO THINGS ARE DELIBERATELY NOT IDENTICAL, AND BOTH HAVE TO BE.
 
-    So every stroke is thickened for this size, and only for this size:
+    The linework is heavier. The mark's strokes are 1.7 to 2.6 units against
+    this 100-unit viewBox, which is a third of a device pixel in a 16px tab
+    slot - at that width a line does not render thin, it renders as grey
+    haze. Copying the numbers faithfully is how you get an icon that looks
+    like something else. The seam is raised furthest because the split is the
+    whole meaning of the mark; if it fades, only a heart shape is left.
 
-      seam        2.6 -> 4.5    the split is the whole point of the mark
-      brows       2.3 -> 3.4
-      scrollwork  1.7 -> 2.6
-      eye         4.4 -> 5.2    (radius)
+      seam 2.6 -> 4.5    brows 2.3 -> 3.4    scrollwork 1.7 -> 2.6
 
-    Same shapes, same colours, same composition. Heavier pen, because the
-    canvas is a hundredth of the size.
-
-    The dark plate stays: half the mark is white, so without it that half
-    disappears against a light tab bar.
+    And there is a plate, but only on light backgrounds. Half the mark is
+    white, so on a light tab bar that half disappears into it. The sidebar
+    never has this problem because the page behind it is always dark - which
+    is also why the plate is hidden under a dark scheme, leaving exactly the
+    sidebar's mark and nothing else.
   -->
-  <rect width="100" height="100" rx="22" fill="#0b0809"/>
+  <style>
+    .plate { fill: #0b0809 }
+    @media (prefers-color-scheme: dark) { .plate { display: none } }
+  </style>
+
+  <rect class="plate" width="100" height="100" rx="22"/>
 
   <defs>
     <path id="h"
@@ -31,41 +35,37 @@
     <clipPath id="c"><use href="#h"/></clipPath>
   </defs>
 
-  <!-- Scaled about the heart's own centre (50, 49) rather than the canvas
-       centre, so the plate's padding is even top and bottom. -->
-  <g transform="translate(50 50) scale(0.9) translate(-50 -49)">
-    <use href="#h" fill="#ccff00"/>
+  <use href="#h" fill="#ccff00"/>
 
-    <g clip-path="url(#c)">
-      <path d="M49 4 C 44 24, 61 38, 58 52 C 55 67, 44 74, 51 94 L 102 94 L 102 4 Z"
-            fill="#ffffff"/>
+  <g clip-path="url(#c)">
+    <path d="M49 4 C 44 24, 61 38, 58 52 C 55 67, 44 74, 51 94 L 102 94 L 102 4 Z"
+          fill="#ffffff"/>
 
-      <!-- the shaded lower lobe on the Beta side -->
-      <path d="M58 52 C 55 67, 44 74, 51 94 L 102 94 L 102 56 Z"
-            fill="#b6b2c0" opacity="0.5"/>
+    <!-- the shaded lower lobe on the Beta side -->
+    <path d="M58 52 C 55 67, 44 74, 51 94 L 102 94 L 102 56 Z"
+          fill="#b6b2c0" opacity="0.5"/>
 
-      <!-- Alpha side: three brow strokes over a plain open eye -->
-      <g stroke="#12121a" stroke-width="3.4" fill="none" stroke-linecap="round">
-        <path d="M14 23 Q 29 15, 44 22"/>
-        <path d="M10 34 Q 27 26, 45 33"/>
-        <path d="M10 46 Q 27 54, 44 47"/>
-      </g>
-      <circle cx="28" cy="38" r="5.2" fill="#ffffff"/>
-      <circle cx="29" cy="38.4" r="2.3" fill="#12121a"/>
-
-      <!-- Beta side: scrollwork over a cut-gem eye -->
-      <g stroke="#12121a" stroke-width="2.6" fill="none" stroke-linecap="round">
-        <path d="M66 24 C 71 16, 80 18, 78 25 C 76 31, 68 30, 70 23"/>
-        <path d="M82 21 C 89 18, 93 25, 88 29 C 84 32, 80 28, 83 25"/>
-        <path d="M62 32 C 72 27, 85 32, 88 40 C 90 48, 84 54, 77 51"/>
-        <path d="M64 45 C 61 53, 67 60, 75 57"/>
-        <path d="M73 47 C 74 58, 66 63, 63 71 C 60 79, 66 84, 71 80"/>
-      </g>
-      <path d="M72 33 L78 38 L75 46 L68 46 L65 38 Z"
-            fill="#d6d2de" stroke="#12121a" stroke-width="2.6" stroke-linejoin="round"/>
-
-      <path d="M49 4 C 44 24, 61 38, 58 52 C 55 67, 44 74, 51 94"
-            fill="none" stroke="#0b0809" stroke-width="4.5"/>
+    <!-- Alpha side: three brow strokes over a plain open eye -->
+    <g stroke="#12121a" stroke-width="3.4" fill="none" stroke-linecap="round">
+      <path d="M14 23 Q 29 15, 44 22"/>
+      <path d="M10 34 Q 27 26, 45 33"/>
+      <path d="M10 46 Q 27 54, 44 47"/>
     </g>
+    <circle cx="28" cy="38" r="5.2" fill="#ffffff"/>
+    <circle cx="29" cy="38.4" r="2.3" fill="#12121a"/>
+
+    <!-- Beta side: scrollwork over a cut-gem eye -->
+    <g stroke="#12121a" stroke-width="2.6" fill="none" stroke-linecap="round">
+      <path d="M66 24 C 71 16, 80 18, 78 25 C 76 31, 68 30, 70 23"/>
+      <path d="M82 21 C 89 18, 93 25, 88 29 C 84 32, 80 28, 83 25"/>
+      <path d="M62 32 C 72 27, 85 32, 88 40 C 90 48, 84 54, 77 51"/>
+      <path d="M64 45 C 61 53, 67 60, 75 57"/>
+      <path d="M73 47 C 74 58, 66 63, 63 71 C 60 79, 66 84, 71 80"/>
+    </g>
+    <path d="M72 33 L78 38 L75 46 L68 46 L65 38 Z"
+          fill="#d6d2de" stroke="#12121a" stroke-width="2.6" stroke-linejoin="round"/>
+
+    <path d="M49 4 C 44 24, 61 38, 58 52 C 55 67, 44 74, 51 94"
+          fill="none" stroke="#0b0809" stroke-width="4.5"/>
   </g>
 </svg>

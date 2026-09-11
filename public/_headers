@@ -26,3 +26,21 @@
 
 /index.html
   Cache-Control: public, max-age=0, must-revalidate
+
+# The frontend itself. Without these three, Pages hands them out with
+# max-age=14400 and a visitor keeps running four-hour-old JavaScript - which
+# quietly cancels the point of a deploy that finishes in thirty seconds. It is
+# how a fix could be live on the server and absent in the browser looking at
+# it.
+#
+# There is no build step here, so the filenames never change and cannot carry
+# a content hash. Revalidating on every load is the alternative: the files are
+# small and unchanged ones come back as a 304.
+/app.js
+  Cache-Control: public, max-age=0, must-revalidate
+
+/shell.js
+  Cache-Control: public, max-age=0, must-revalidate
+
+/styles.css
+  Cache-Control: public, max-age=0, must-revalidate
