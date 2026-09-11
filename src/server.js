@@ -13,6 +13,8 @@ import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
 import { config, ROOT } from "./config.js";
+import { publish } from "./publish.js";
+import { latest } from "./storage.js";
 
 const PUBLIC_DIR = path.join(ROOT, "public");
 
@@ -56,5 +58,38 @@ const server = http.createServer(serveStatic);
 
 server.listen(config.port, () => {
   console.log(`\n  Alphet web server running at http://localhost:${config.port}`);
-  console.log(`  chain: ${config.chainName} (id ${config.chainId})   |   discovery: GeckoTerminal /${config.network}\n`);
+  console.log(`  chain: ${config.chainName} (id ${config.chainId})   |   discovery: GeckoTerminal /${config.network}`);
+
+  // Rebuild public/api from the snapshots on disk before serving.
+  //
+  // Those four files are derived data and are not in the repo, while the
+  // snapshots they are built from are - the scheduled collector commits every
+  // reading. So `git pull` brings the new data down without updating what the
+  // page actually reads, and the dashboard sits on whatever was last built
+  // here. That is invisible from the page, which is the problem with it.
+  //
+  // publish() is pure disk work - no network, no keys - so doing it on every
+  // boot costs nothing and removes the step people have to remember. It also
+  // closes the drift for good: the server can no longer serve API files older
+  // than the snapshots sitting beside them.
+  try {
+    const built = publish();
+    const newest = latest();
+    const age = newest
+      ? (Date.now() - new Date(newest.timestamp)) / 3600000
+      : null;
+
+    console.log(
+      `  rebuilt public/api from ${built.files} file(s)` +
+        (age === null
+          ? " - no readings on file yet\n"
+          : `, newest reading ${age.toFixed(1)}h old` +
+            (age > 12 ? " - run `git pull` to fetch newer ones\n" : "\n"))
+    );
+  } catch (err) {
+    // Never fatal. A server that will not start because it could not rebuild
+    // derived data is worse than one serving slightly stale data, and the page
+    // falls back to its built-in demo reading when the API is missing.
+    console.log(`  could not rebuild public/api: ${err.message}\n`);
+  }
 });
