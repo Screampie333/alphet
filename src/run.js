@@ -24,14 +24,27 @@ async function tick() {
     const history = recent(7);
     const snapshot = score(raw, history);
     const total = append(snapshot);
-    const published = publish();
+    // Mock runs do not publish.
+    //
+    // Snapshots were given their own file so demo data could never corrupt a
+    // measurement, but publish() still wrote invented numbers straight over
+    // public/api - so a single `npm run mock` left the dashboard showing
+    // fiction until someone remembered to run `npm run publish`. It happened
+    // silently, and the page gives no sign which kind of data it is holding.
+    //
+    // Nothing is lost by skipping it: the dashboard already falls back to its
+    // own built-in demo reading when the API is empty, so mock never needed to
+    // publish to be previewable.
+    const published = useMock ? null : publish();
 
     console.log(consoleReport(snapshot));
     console.log("  --- X post version ---\n");
     console.log(xPostReport(snapshot));
     console.log(
-      `\n  saved. ${total} snapshot(s) on file, ` +
-        `${published.kb} KB of API written to public/api/.`
+      `\n  saved. ${total} snapshot(s) on file` +
+        (published
+          ? `, ${published.kb} KB of API written to public/api/.`
+          : `. Mock run - public/api left untouched.`)
     );
 
     // Three budgets now, and they bind differently. GeckoTerminal is capped

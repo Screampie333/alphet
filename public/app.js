@@ -174,7 +174,6 @@
         volumeUsd: Math.round(180000 / (i + 1.4)),
         holderCount: alpha ? 400 + i * 190 : 30 + i * 17,
         top10Percent: alpha ? 14 + i * 1.6 : 52 + i * 3.4,
-        honeypot: !alpha && i % 4 === 3,
       });
     }
 
@@ -203,7 +202,10 @@
         alphaVolume: alphaVolume,
         betaVolume: betaVolume,
         totalVolume: alphaVolume + betaVolume,
-        honeypots: tokens.filter(function (t) { return t.honeypot; }).length,
+        // Invented to match a real reading, where honeypots are removed from
+        // the population before the split is taken.
+        honeypots: 3,
+        honeypotVolume: 41000,
       },
       tokens: tokens,
       raw: { source: "demo", chain: "Robinhood Chain", lookbackHours: 24, totals: { tokensSeen: 71, tokensScored: 10 } },
@@ -266,9 +268,18 @@
 
     $("verdictLabel").textContent = snap.verdict.label;
     $("verdictLabel").style.color = alpha >= 55 ? "var(--alpha)" : alpha >= 45 ? "var(--ink)" : "var(--beta)";
+    // Honeypots are excluded from the split above, so the count has to say
+    // "excluded" rather than read as one more category inside it - and it has
+    // to carry the money, because the number of tokens removed says nothing
+    // about how far their removal moved the seam.
+    var out = snap.split.honeypots;
+    var outVolume = snap.split.honeypotVolume;
     $("verdictIndex").textContent = "quality index " + snap.alphetIndex + "/100 · " +
       snap.split.alphaCount + " alpha / " + snap.split.betaCount + " beta" +
-      (snap.split.honeypots ? " · " + snap.split.honeypots + " honeypot" + (snap.split.honeypots > 1 ? "s" : "") : "");
+      (out
+        ? " · " + out + " honeypot" + (out > 1 ? "s" : "") + " excluded" +
+          (outVolume ? " ($" + compact(outVolume) + ")" : "")
+        : "");
     $("verdictSummary").textContent = snap.verdict.summary;
   }
 

@@ -366,13 +366,30 @@ function weightedMean(items, getValue, getWeight) {
  * sides while you watch.
  */
 function scoreWindow(tokens, windowKey) {
-  const scored = tokens
+  const readable = tokens
     .map((token) => scoreToken(token, windowKey))
     .filter((t) => t.quality !== null);
 
-  if (!scored.length) return null;
-
   const volume = (token) => Math.max(0, token.volumeUsd || 0);
+
+  // Honeypots are disqualified rather than scored.
+  //
+  // A token you cannot sell out of is not a low-quality memecoin, it is not a
+  // memecoin. The gauge asks where money went, and for these the answer is
+  // that it did not go anywhere - it went in. Ranking them against tokens that
+  // can actually be traded compares two different kinds of thing.
+  //
+  // Removing them silently would be worse than leaving them in, though, and
+  // by a lot. Measured on the 02:30 reading: 15 honeypots carried $44.4M, or
+  // 15.8% of all volume and 22.2% of Beta's, and dropping them moved the seam
+  // from 28.9% to 34.3% Alpha. A gauge that reads healthier because its worst
+  // tokens were deleted is exactly the survivorship bias this project already
+  // warns about in backfill - so what was removed is counted, priced, and put
+  // on the page next to the number it would otherwise have flattered.
+  const disqualified = readable.filter((t) => t.honeypot);
+  const scored = readable.filter((t) => !t.honeypot);
+
+  if (!scored.length) return null;
 
   const alpha = scored.filter((token) => token.side === "alpha");
   const beta = scored.filter((token) => token.side === "beta");
@@ -408,7 +425,13 @@ function scoreWindow(tokens, windowKey) {
       alphaVolume: Number(alphaVolume.toFixed(2)),
       betaVolume: Number(betaVolume.toFixed(2)),
       totalVolume: Number(totalVolume.toFixed(2)),
-      honeypots: scored.filter((t) => t.honeypot).length,
+      // Disqualified, so by definition none are left in `scored` - this
+      // counts what was taken out, which is the only reason it is worth
+      // reporting at all.
+      honeypots: disqualified.length,
+      honeypotVolume: Number(
+        disqualified.reduce((sum, token) => sum + volume(token), 0).toFixed(2)
+      ),
       partialHolders: scored.filter((t) => t.partialHolders).length,
     },
   };
