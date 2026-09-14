@@ -95,11 +95,20 @@ export function scoreLiquidityPermanence(token) {
 // --- 3. Developer track record ---
 export function scoreDevTrackRecord(token) {
   const dev = token.devRecord;
-  if (!dev || !dev.known || dev.launches === 0) {
-    // A first launch is not a red flag and it is not a credential either.
-    // Slightly below neutral: unproven is a real cost to a buyer.
-    return 45;
-  }
+
+  // No record to read, so there is nothing to score.
+  //
+  // This used to return 45 - "slightly below neutral, because unproven is a
+  // real cost to a buyer". That argument is about the world; the number was
+  // about us. launches counts other tokens by the same deployer IN OUR INDEX,
+  // and the index holds one chain and 835 contracts, so "no prior launches"
+  // mostly means "we have not seen any".
+  //
+  // Every other metric here returns null when it cannot read something, and
+  // has its weight shared out. This one scored the gap instead, which pulled
+  // 16.4% of tokens toward 45 from whichever side they were on - flattering
+  // the bad ones and penalising the good ones by the same arithmetic.
+  if (!dev || !dev.known || dev.launches === 0) return null;
 
   const cleanRate = 1 - dev.rugs / dev.launches;
 
