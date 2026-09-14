@@ -171,8 +171,11 @@
         <div class="samples-row" id="samplesRow"></div>
       </div>
 
-      <!-- recent readings, as a strip of split bars -->
-      <div class="card">
+      <!-- Recent readings, as a strip of split bars.
+           Hidden for now. SHOW_TREND in app.js is the only switch; this starts
+           hidden too so the card never flashes on screen before the script
+           has decided. -->
+      <div class="card" id="trendBlock" hidden>
         <div class="card-head">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
           <span>Recent readings</span>

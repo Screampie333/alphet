@@ -65,6 +65,13 @@
   // line is the only switch. Flip it to true and the row comes back.
   var SHOW_PREVIEW = false;
 
+  // Whether the Recent readings strip is shown.
+  //
+  // Hidden on the page only. Nothing about the data changes: the collector
+  // still writes every snapshot, history.json is still published, and the
+  // strip still renders the moment this is true again.
+  var SHOW_TREND = false;
+
   // Rows per page in the token table.
   var PAGE_SIZE = 25;
 
@@ -391,6 +398,10 @@
   }
 
   function renderTrend() {
+    var block = $("trendBlock");
+    if (block) block.hidden = !SHOW_TREND;
+    if (!SHOW_TREND) return;
+
     var host = $("trend");
     host.textContent = "";
 
