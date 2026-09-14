@@ -114,6 +114,26 @@ async function send(url) {
       continue;
     }
 
+    // 5xx is the server failing, not us asking too often - and under the kind
+    // of load that produces heavy 429s it is exactly what a gateway returns.
+    //
+    // This used to throw on anything that was not a 429, so one 504 ended the
+    // whole run. It happened twice: the 10:33 scheduled run on Sep 11, and a
+    // manual run on Sep 14 that had ridden out nine rate limits over nine
+    // minutes of discovery and then died on a single gateway timeout, before
+    // reading one token. chain.js has retried 5xx since the same lesson was
+    // learned there; this client never got the same treatment.
+    //
+    // It does not touch the pace. A 5xx says nothing about how fast we are
+    // going, and slowing the rest of the run for it would only lengthen a
+    // job that is already the thing most at risk of running out of time.
+    if (res.status >= 500 && attempt < BACKOFF_MS.length) {
+      const pause = BACKOFF_MS[attempt];
+      console.warn(`  GeckoTerminal answered HTTP ${res.status}, retrying in ${Math.round(pause / 1000)}s`);
+      await sleep(pause);
+      continue;
+    }
+
     throw new Error(`GeckoTerminal returned HTTP ${res.status}`);
   }
 }
