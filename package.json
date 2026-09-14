@@ -11,7 +11,8 @@
     "history": "node src/history.js",
     "backfill": "node src/backfill.js",
     "web": "node src/server.js",
-    "publish": "node -e \"import('./src/publish.js').then(m=>{const r=m.publish();console.log(r.files+' files, '+r.kb+' KB written to public/api/')})\""
+    "publish": "node -e \"import('./src/publish.js').then(m=>{const r=m.publish();console.log(r.files+' files, '+r.kb+' KB written to public/api/')})\"",
+    "test": "node test/live-parity.mjs"
   },
   "engines": {
     "node": ">=18"

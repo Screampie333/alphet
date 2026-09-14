@@ -97,6 +97,12 @@
     live: false,
     timeframe: "h24",
     tokenPage: 0,
+    // The collector's snapshot, kept untouched. Every live refresh is scored
+    // from this, never from the previous live result - otherwise each
+    // refresh would re-score the last one and drift a little further from
+    // what was measured, every five minutes, for as long as the tab was open.
+    baseSnapshot: null,
+    market: { lastAt: null, busy: false, failed: false, coverage: null },
     sample: null,
   };
 
@@ -963,6 +969,26 @@
       return;
     }
 
+    var market = state.market;
+    if (state.live && !snap.demo && market.lastAt) {
+      var ago = Math.max(0, Math.round((Date.now() - market.lastAt) / 60000));
+      dot.className = market.failed ? "dot" : "dot live";
+      text.textContent = (market.failed ? "Live paused · " : "Live · ") + (ago < 1 ? "just now" : ago + "m ago");
+
+      // Both halves named, because they are not the same age. The money is
+      // minutes old; the quality verdicts it is weighed against are from the
+      // last full reading, which can be hours old - and a reader who assumes
+      // the whole page is live would be wrong about the half that matters.
+      var cov = market.coverage;
+      foot.textContent =
+        "Market data refreshed " + new Date(market.lastAt).toLocaleTimeString() +
+        (cov ? " for the top " + cov.returned + " tokens by volume" : "") +
+        ", every 5 minutes. Quality verdicts from the reading at " +
+        new Date(snap.timestamp).toLocaleString() + "." +
+        (market.failed ? " The last refresh failed; these numbers are from the one before it." : "");
+      return;
+    }
+
     if (state.live && !snap.demo) {
       dot.className = "dot live";
       var source = (snap.raw && snap.raw.source) || "live";
@@ -1004,6 +1030,88 @@
     });
   }
 
+  // --------------------------------------------------------------
+  // LIVE MARKET DATA
+  // --------------------------------------------------------------
+
+  var LIVE_INTERVAL_MS = 5 * 60 * 1000;
+
+  /**
+   * Re-read the market for the highest-volume tokens and rebuild the gauge.
+   *
+   * Runs in the visitor's browser, against their own GeckoTerminal rate
+   * limit - ten calls every five minutes, for the ~99.9% of volume the top
+   * 300 tokens carry. The scoring is public/live.js, a tested port of the
+   * collector's, so a live number means what a collected one means.
+   */
+  function refreshMarket() {
+    var Live = window.AlphetLive;
+    var base = state.baseSnapshot;
+    if (!Live || !base || !base.tokens || !base.tokens.length || state.market.busy) return;
+
+    state.market.busy = true;
+    Live.fetchFresh(Live.pickPools(base))
+      .then(function (res) {
+        // Nothing came back at all: keep whatever is on screen, and say so.
+        if (!res.returned) {
+          state.market.failed = true;
+          return;
+        }
+
+        var out = Live.rescore(base, res.pools, state.meta);
+        var h = out.windows.h24;
+        if (!h) return;
+
+        state.snapshot = Object.assign({}, base, {
+          alphaWeight: h.alphaWeight,
+          betaWeight: h.betaWeight,
+          alphetIndex: h.alphetIndex,
+          subScores: h.subScores,
+          measuredOn: h.measuredOn,
+          split: h.split,
+          verdict: verdictFor(h.alphaWeight),
+          tokens: out.tokens,
+        });
+        state.windows = out.windows;
+        state.market.lastAt = Date.now();
+        state.market.failed = res.failedChunks > 0 && res.returned < res.requested / 2;
+        state.market.coverage = res;
+
+        renderGauge();
+        renderMetrics();
+        renderTimeframes();
+        renderTokens();
+      })
+      .catch(function () {
+        state.market.failed = true;
+      })
+      .then(function () {
+        state.market.busy = false;
+        renderStatus();
+      });
+  }
+
+  function startMarket() {
+    if (startMarket.started) return;
+    startMarket.started = true;
+    refreshMarket();
+
+    // Only while someone is looking. A backgrounded tab that kept polling
+    // would spend the visitor's data and their rate limit on a page nobody
+    // can see - and a phone left on this page overnight would do it 100 times.
+    setInterval(function () {
+      if (document.visibilityState === "visible") refreshMarket();
+    }, LIVE_INTERVAL_MS);
+
+    document.addEventListener("visibilitychange", function () {
+      var stale = !state.market.lastAt || Date.now() - state.market.lastAt > LIVE_INTERVAL_MS;
+      if (document.visibilityState === "visible" && stale) refreshMarket();
+    });
+
+    // Keeps "2m ago" honest between refreshes.
+    setInterval(renderStatus, 30000);
+  }
+
   function load() {
     // Each of these renders on arrival rather than waiting for the others, so
     // a slow or broken endpoint costs only its own section.
@@ -1018,8 +1126,10 @@
       .then(function (data) {
         if (!data.snapshot) return;
         state.snapshot = data.snapshot;
+        state.baseSnapshot = data.snapshot;
         state.live = true;
         renderAll();
+        startMarket();
       })
       .catch(function () {});
 
@@ -1034,7 +1144,9 @@
 
     getJson("/api/windows.json")
       .then(function (data) {
-        state.windows = data.windows;
+        // Arrives independently of latest.json, so it can land after a live
+        // refresh has already filled these in with fresher numbers.
+        if (!state.market.lastAt) state.windows = data.windows;
         if (data.headlineWindow) state.headlineWindow = data.headlineWindow;
         renderTimeframes();
       })

@@ -59,6 +59,17 @@ export function publish() {
     intervalMinutes: config.intervalMinutes,
     lookbackHours: config.lookbackHours,
     minLiquidityUsd: config.thresholds.minLiquidityUsd,
+    // The rug-signal thresholds, so the page can re-score trading activity
+    // between collection runs with the same numbers the collector used. The
+    // scoring LOGIC is ported to public/live.js; the PARAMETERS stay here, in
+    // one place, so the two cannot quietly disagree about what "healthy" means.
+    thresholds: {
+      healthyVolumePerHolder: config.thresholds.healthyVolumePerHolder,
+      suspiciousVolumePerHolder: config.thresholds.suspiciousVolumePerHolder,
+      buyPressureGood: config.thresholds.buyPressureGood,
+      buyPressureBad: config.thresholds.buyPressureBad,
+      minTradesForSignal: config.thresholds.minTradesForSignal,
+    },
     generatedAt: new Date().toISOString(),
   });
 
