@@ -31,6 +31,15 @@ export const SELECTOR = {
   token0: "0x0dfe1681",
   token1: "0xd21220a7",
   getPair: "0xe6a43905",
+  // Uniswap V3 pool. Present on V3, absent on a V2 pair, so it is what
+  // tells the two apart when totalSupply reverts on both counts.
+  //
+  // VERIFIED ON CHAIN, not recalled: called against three live RHC pools,
+  // which answered it alongside fee(), slot0() and liquidity() while
+  // reverting on totalSupply() and getReserves(). Do not add a selector here
+  // from memory - a Mint topic guessed that way in this same investigation
+  // was wrong by one nibble and silently returned zero results.
+  tickSpacing: "0xd0c93a7c",
 };
 
 // --- standard event topics (keccak256 of the full event signature) ---

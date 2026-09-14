@@ -468,9 +468,10 @@ export async function checkLiquidityLocked(poolAddress, dex) {
   // Ask the pool what it is rather than inferring it from its venue's name.
   // getReserves rides along because a contract with an LP supply but no
   // reserves is not a V2 pair, whatever else it might be.
-  const [supplyHex, reservesHex, ...heldHexes] = await rpcBatch([
+  const [supplyHex, reservesHex, tickSpacingHex, ...heldHexes] = await rpcBatch([
     { method: "eth_call", params: [{ to: poolAddress, data: SELECTOR.totalSupply }, "latest"] },
     { method: "eth_call", params: [{ to: poolAddress, data: SELECTOR.getReserves }, "latest"] },
+    { method: "eth_call", params: [{ to: poolAddress, data: SELECTOR.tickSpacing }, "latest"] },
     ...holders.map((address) => ({
       method: "eth_call",
       params: [{ to: poolAddress, data: calldata(SELECTOR.balanceOf, encodeAddress(address)) }, "latest"],
@@ -481,6 +482,14 @@ export async function checkLiquidityLocked(poolAddress, dex) {
   // zero - and zero LP supply means "the liquidity has already been pulled".
   // Reporting a pool we could not read as a drained pool accuses it of the
   // worst thing on the board, so the two cases are kept apart here.
+  // A V3 pool reverts on totalSupply because it has no LP token at all, and
+  // reporting that as "did not answer totalSupply" describes our probe rather
+  // than the pool. 349 of 835 cached reads said exactly that, which hid the
+  // real shape of the gap: they are not odd pools, they are Uniswap V3.
+  if (tickSpacingHex !== null && tickSpacingHex !== "0x") {
+    return unmeasurable("Uniswap V3 - concentrated liquidity");
+  }
+
   if (supplyHex === null) return unmeasurable("pool did not answer totalSupply");
   if (reservesHex === null) return unmeasurable("not an LP-token pool");
 
@@ -998,8 +1007,25 @@ export async function collect({ mock = false } = {}) {
   // instead of starting over.
   const started = Date.now();
   const CHECKPOINT_EVERY = 25;
+  const budgetMs = config.freshReadBudgetMinutes * 60000;
+  const deferred = [];
+  let budgetSpentAt = null;
 
   for (const [index, pool] of shortlist.entries()) {
+    // Out of time for fresh reads. Anything we already hold a read for is
+    // still cheap enough to include; anything we do not is left for next run.
+    if (Date.now() - started > budgetMs && !cachedRead(pool.address, pool.ageHours)) {
+      if (budgetSpentAt === null) {
+        budgetSpentAt = index;
+        console.log(
+          `  fresh-read budget (${config.freshReadBudgetMinutes} min) spent at ${index}/${shortlist.length}` +
+            ` - finishing on cached reads, the rest waits for the next run`
+        );
+      }
+      deferred.push({ symbol: pool.symbol, address: pool.address, volumeUsd: pool.volumeUsd || 0 });
+      continue;
+    }
+
     try {
       tokens.push(await readToken(pool, { ...ctx, rank: index }));
     } catch (err) {
@@ -1023,6 +1049,18 @@ export async function collect({ mock = false } = {}) {
   }
 
   saveCache();
+
+  // Deferred is not skipped. Nothing went wrong with these - they were not
+  // attempted - and they are the low-volume tail by construction. Said out loud
+  // anyway, with the money attached, so a run that deferred a lot is visible
+  // as one rather than looking like a smaller market.
+  if (deferred.length) {
+    const deferredVolume = deferred.reduce((sum, t) => sum + t.volumeUsd, 0);
+    console.log(
+      `\n  deferred ${deferred.length} uncached token(s) to the next run` +
+        ` (${Math.round(deferredVolume).toLocaleString("en-US")} of volume).\n`
+    );
+  }
 
   // A run that lost most of its shortlist is not a quiet market, it is a
   // failed measurement - and the two look identical unless it is said out

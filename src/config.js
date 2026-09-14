@@ -195,6 +195,29 @@ export const config = {
   // entirely, because the check is `rank < indexerTokenLimit`.
   indexerTokenLimit: Number(process.env.INDEXER_TOKEN_LIMIT || 1000),
 
+  // How long a run may spend reading tokens it has no cached read for.
+  //
+  // WHY THIS EXISTS: the universe kept growing and runs crossed the job's
+  // 60-minute timeout. GitHub kills a job there, and a killed job never
+  // reaches the step that uploads the chain cache - so every read it had paid
+  // for was thrown away. The next run started from the same cache, read the
+  // same tokens, hit the same wall. On 2026-09-13/14 that happened five times
+  // in a row: 1,453 tokens, 525 read at the moment of each kill, nothing kept,
+  // no reading for 36 hours. It could not recover, because each attempt was
+  // identical to the last and the universe only got bigger.
+  //
+  // So a run now stops starting FRESH reads when this runs out, and finishes
+  // properly: tokens that already have a cached read are still included (they
+  // cost about a second each), tokens that do not are deferred to the next
+  // run, and the run exits cleanly - which means it commits, deploys, and
+  // saves the cache. Each run now leaves the backlog smaller than it found it,
+  // instead of exactly the same size.
+  //
+  // The shortlist is ordered by volume, so what gets deferred is the
+  // low-volume tail - the part of the market that moves a money-weighted
+  // gauge least.
+  freshReadBudgetMinutes: Number(process.env.FRESH_READ_BUDGET_MINUTES || 35),
+
   // How many calls ride in one HTTP request, and the minimum gap between
   // requests. The public endpoint counts requests rather than the calls inside
   // them, but rejects batches that are too large outright - so these two trade
