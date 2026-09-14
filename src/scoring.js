@@ -375,9 +375,11 @@ function weightedMean(items, getValue, getWeight) {
  * sides while you watch.
  */
 function scoreWindow(tokens, windowKey) {
-  const readable = tokens
-    .map((token) => scoreToken(token, windowKey))
-    .filter((t) => t.quality !== null);
+  // Scored once, then split into what can be read and what cannot - both
+  // halves are reported, the second one by name in the snapshot.
+  const everyToken = tokens.map((token) => scoreToken(token, windowKey));
+  const readable = everyToken.filter((t) => t.quality !== null);
+  const unscoreable = everyToken.filter((t) => t.quality === null);
 
   const volume = (token) => Math.max(0, token.volumeUsd || 0);
 
@@ -422,6 +424,10 @@ function scoreWindow(tokens, windowKey) {
 
   return {
     scored,
+    // Returned so score() can name them in the snapshot. Both are left out of
+    // every number above, and until now neither was recorded by name.
+    disqualified,
+    unscoreable,
     alphetIndex: Math.round(weightedMean(scored, (t) => t.quality, volume)),
     alphaWeight: Number(alphaWeight.toFixed(1)),
     betaWeight: Number((100 - alphaWeight).toFixed(1)),
@@ -462,7 +468,7 @@ export function score(raw, history = []) {
   for (const key of WINDOW_KEYS) {
     const result = scoreWindow(tokens, key);
     if (!result) continue;
-    const { scored: _dropped, ...summary } = result;
+    const { scored: _dropped, disqualified: _d, unscoreable: _u, ...summary } = result;
     windows[key] = summary;
   }
 
@@ -486,6 +492,7 @@ export function score(raw, history = []) {
       split: { alphaCount: 0, betaCount: 0, alphaVolume: 0, betaVolume: 0 },
       tokens: [],
       raw: { ...raw, tokens: [] },
+      excluded: raw.excluded || [],
       baselineSnapshots: history.length,
     };
   }
@@ -534,6 +541,27 @@ export function score(raw, history = []) {
       lookbackHours: raw.lookbackHours,
       totals: raw.totals,
     },
+
+    // Every token that is not in `tokens`, and why: whatever discovery and the
+    // run dropped before scoring, plus the headline window's honeypots and
+    // unscoreable tokens. Kept on the newest snapshot only, like tokens.
+    excluded: [
+      ...(raw.excluded || []),
+      ...headline.disqualified.map((t) => ({
+        address: t.address,
+        symbol: t.symbol,
+        volumeUsd: t.volumeUsd,
+        reason: "honeypot",
+        detail: "a simulated sell reverted",
+      })),
+      ...headline.unscoreable.map((t) => ({
+        address: t.address,
+        symbol: t.symbol,
+        volumeUsd: t.volumeUsd,
+        reason: "unscoreable",
+        detail: "no metric could be read",
+      })),
+    ],
     baselineSnapshots: history.length,
   };
 }

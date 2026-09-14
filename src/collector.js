@@ -957,6 +957,10 @@ export async function collect({ mock = false } = {}) {
   const found = await discoverTokens({ known: store.universe, dexCursor: store.dexCursor });
   const pools = found.pools;
 
+  // Accumulated from here to the end of the run. Discovery's own exclusions
+  // come first; the reading adds honeypots and unscoreable tokens later.
+  const excluded = [...(found.excluded || [])];
+
   // The universe is remembered so the rotating venue sweep accumulates instead
   // of starting over: run one sees the ranked feeds plus eight venues, and a
   // few runs later it has the whole chain - after which refreshing all of it
@@ -976,9 +980,20 @@ export async function collect({ mock = false } = {}) {
   // Thin pools are dropped before anything is spent on them: below a few
   // hundred dollars a single trade moves the price, so the volume, the buy/
   // sell split and the price are all noise rather than a market.
-  const tradeable = pools.filter(
-    (pool) => pool.liquidityUsd >= config.thresholds.minLiquidityUsd
-  );
+  const tradeable = [];
+  for (const pool of pools) {
+    if (pool.liquidityUsd >= config.thresholds.minLiquidityUsd) {
+      tradeable.push(pool);
+      continue;
+    }
+    excluded.push({
+      address: pool.address,
+      symbol: pool.symbol,
+      volumeUsd: pool.volumeUsd,
+      reason: "thin-liquidity",
+      detail: `${Math.round(pool.liquidityUsd)} USD of liquidity, under the ${config.thresholds.minLiquidityUsd} USD floor`,
+    });
+  }
 
   // Highest volume first. The sort matters even without a cap: if a run is
   // interrupted or the indexer starts refusing halfway through, what is
@@ -987,6 +1002,16 @@ export async function collect({ mock = false } = {}) {
   const shortlist = config.maxTokensPerRun > 0
     ? ranked.slice(0, config.maxTokensPerRun)
     : ranked;
+
+  for (const pool of ranked.slice(shortlist.length)) {
+    excluded.push({
+      address: pool.address,
+      symbol: pool.symbol,
+      volumeUsd: pool.volumeUsd,
+      reason: "over-cap",
+      detail: `below the top ${config.maxTokensPerRun} by volume`,
+    });
+  }
 
   const head = await blockNumber();
   const blocksPerSec = await blocksPerSecond(head);
@@ -1023,6 +1048,13 @@ export async function collect({ mock = false } = {}) {
         );
       }
       deferred.push({ symbol: pool.symbol, address: pool.address, volumeUsd: pool.volumeUsd || 0 });
+      excluded.push({
+        address: pool.address,
+        symbol: pool.symbol,
+        volumeUsd: pool.volumeUsd,
+        reason: "deferred",
+        detail: "no cached read, and this run's fresh-read budget was spent",
+      });
       continue;
     }
 
@@ -1031,6 +1063,13 @@ export async function collect({ mock = false } = {}) {
     } catch (err) {
       console.error(`  skipped ${pool.symbol} (${pool.address}): ${err.message}`);
       skipped.push({ symbol: pool.symbol, address: pool.address, reason: err.message.slice(0, 120) });
+      excluded.push({
+        address: pool.address,
+        symbol: pool.symbol,
+        volumeUsd: pool.volumeUsd,
+        reason: "skipped",
+        detail: err.message.slice(0, 120),
+      });
     }
 
     const done = index + 1;
@@ -1089,6 +1128,7 @@ export async function collect({ mock = false } = {}) {
       tokensSkipped: skipped.length,
     },
     skipped,
+    excluded,
   };
 }
 

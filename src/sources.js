@@ -398,6 +398,26 @@ export async function discoverTokens({ known = [], dexCursor = 0 } = {}) {
   const refreshed = stale.length ? await refreshPools(stale) : [];
   const all = [...seenThisRun, ...refreshed];
 
+  // Every token this run leaves out, and why. See the note on `excluded` in
+  // the return value.
+  const excluded = [];
+
+  // A remembered pool we asked about that never came back. Nothing downstream
+  // can notice this on its own: the token is not skipped, it is simply never
+  // there, so no count anywhere goes down when it disappears.
+  const returned = new Set(refreshed.map((pool) => pool.poolAddress));
+  const rememberedBy = new Map(known.map((entry) => [entry.poolAddress, entry.address]));
+  for (const poolAddress of stale) {
+    if (returned.has(poolAddress)) continue;
+    excluded.push({
+      address: rememberedBy.get(poolAddress) || null,
+      symbol: null,
+      volumeUsd: null,
+      reason: "not-returned",
+      detail: `remembered pool ${poolAddress} did not come back from /pools/multi`,
+    });
+  }
+
   // A token can trade in several pools. The deepest one is kept, since that is
   // where price is set and where a sell would actually route.
   const best = new Map();
@@ -415,11 +435,32 @@ export async function discoverTokens({ known = [], dexCursor = 0 } = {}) {
   // *against* is a quote asset by definition, so this keeps working when RHC
   // adds a stablecoin nobody told us about.
   const quotes = new Set(config.quoteTokens.map((a) => a.toLowerCase()));
+  // The first pool that quoted each one, kept so an exclusion can name the
+  // pair that caused it rather than just asserting that it happened.
+  const quotedIn = new Map();
   for (const pool of all) {
-    if (pool.quoteAddress) quotes.add(pool.quoteAddress);
+    if (!pool.quoteAddress) continue;
+    quotes.add(pool.quoteAddress);
+    if (!quotedIn.has(pool.quoteAddress)) quotedIn.set(pool.quoteAddress, pool);
   }
 
-  const pools = [...best.values()].filter((pool) => !quotes.has(pool.address));
+  const pools = [];
+  for (const pool of best.values()) {
+    if (!quotes.has(pool.address)) {
+      pools.push(pool);
+      continue;
+    }
+    const via = quotedIn.get(pool.address);
+    excluded.push({
+      address: pool.address,
+      symbol: pool.symbol,
+      volumeUsd: pool.volumeUsd,
+      reason: "quote-token",
+      detail: via
+        ? `priced against in ${via.pairName || via.poolAddress} on ${via.dex}`
+        : "listed in QUOTE_TOKENS",
+    });
+  }
 
   return {
     pools,
@@ -428,5 +469,11 @@ export async function discoverTokens({ known = [], dexCursor = 0 } = {}) {
     universe: pools.map((pool) => ({ address: pool.address, poolAddress: pool.poolAddress })),
     sweptThisRun: sweep.length,
     refreshed: refreshed.length,
+    // Everything this run left out before scoring, with the reason. Without
+    // it a token can vanish from a reading with no line anywhere saying so -
+    // which is what happened to PONS on Sep 14: tens of millions a day on
+    // GeckoTerminal, 34,000 sells, not a honeypot, and absent from the
+    // reading with nothing in the log or the data to say why.
+    excluded,
   };
 }

@@ -49,7 +49,13 @@ export function append(snapshot) {
 
   const capped = all.slice(-KEEP_SNAPSHOTS);
   const cutoff = capped.length - SNAPSHOTS_WITH_TOKENS;
-  const pruned = capped.map((s, i) => (i < cutoff && s.tokens?.length ? { ...s, tokens: [] } : s));
+  // excluded goes with tokens: both are per-token lists, both only matter for
+  // the reading being looked at, and both would grow the file every run.
+  const pruned = capped.map((s, i) =>
+    i < cutoff && (s.tokens?.length || s.excluded?.length)
+      ? { ...s, tokens: [], excluded: [] }
+      : s
+  );
 
   fs.writeFileSync(config.dataFile, JSON.stringify(pruned, null, 2), "utf8");
   return pruned.length;
